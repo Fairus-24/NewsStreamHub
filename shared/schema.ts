@@ -188,7 +188,7 @@ export const articleTags = pgTable("article_tags", {
   tagId: integer("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
 }, (table) => {
   return {
-    unq: primaryKey(table.articleId, table.tagId),
+    unq: index("article_tags_unique").on(table.articleId, table.tagId),
   };
 });
 
@@ -211,7 +211,7 @@ export const articleLikes = pgTable("article_likes", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {
-    unq: primaryKey(table.articleId, table.userId),
+    unq: index("article_likes_unique").on(table.articleId, table.userId),
   };
 });
 
@@ -234,7 +234,7 @@ export const bookmarks = pgTable("bookmarks", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {
-    unq: primaryKey(table.articleId, table.userId),
+    unq: index("bookmarks_unique").on(table.articleId, table.userId),
   };
 });
 
@@ -257,7 +257,7 @@ export const commentLikes = pgTable("comment_likes", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {
-    unq: primaryKey(table.commentId, table.userId),
+    unq: index("comment_likes_unique").on(table.commentId, table.userId),
   };
 });
 
