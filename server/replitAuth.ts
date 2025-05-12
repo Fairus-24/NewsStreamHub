@@ -6,10 +6,15 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
+}
+
+if (!process.env.SESSION_SECRET) {
+  throw new Error("Environment variable SESSION_SECRET is required");
 }
 
 const getOidcConfig = memoize(
