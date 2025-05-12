@@ -126,19 +126,21 @@ export const insertArticleSchema = createInsertSchema(articles).omit({
   updatedAt: true,
 });
 
-// Comments
+// Comments - Avoid circular reference issues by not defining the parent FK directly
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
   content: text("content").notNull(),
   articleId: integer("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
   authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  parentId: integer("parent_id").references(() => comments.id, { onDelete: "cascade" }),
+  parentId: integer("parent_id"), // Will add FK constraint with SQL after table is created
   status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, approved, rejected, flagged
   likes: integer("likes").default(0),
   dislikes: integer("dislikes").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Add FK constraint in SQL after table is created
 
 export const commentRelations = relations(comments, ({ one, many }) => ({
   article: one(articles, {
@@ -279,7 +281,7 @@ export const commentDislikes = pgTable("comment_dislikes", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {
-    unq: primaryKey(table.commentId, table.userId),
+    unq: index("comment_dislikes_unique").on(table.commentId, table.userId),
   };
 });
 
@@ -303,7 +305,7 @@ export const commentReports = pgTable("comment_reports", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {
-    unq: primaryKey(table.commentId, table.userId),
+    unq: index("comment_reports_unique").on(table.commentId, table.userId),
   };
 });
 
@@ -348,7 +350,7 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
   return {
-    unq: primaryKey(table.section, table.key),
+    unq: index("settings_unique").on(table.section, table.key),
   };
 });
 
