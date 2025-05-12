@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+Pro:wght@300;400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 224 71.4% 4.1%;
+  --muted: 220 14.3% 95.9%;
+  --muted-foreground: 220 8.9% 46.1%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71.4% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71.4% 4.1%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --primary: 237 77% 31%;  /* #1A237E (deep blue) */
+  --primary-foreground: 210 20% 98%;
+  --secondary: 200 18% 33%;  /* #455A64 (slate) */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 45 100% 51%;  /* #FFC107 (gold) */
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 20% 98%;
+  --ring: 224 71.4% 4.1%;
+  --radius: 0.5rem;
+  
+  /* Chart colors */
+  --chart-1: 237 77% 31%;
+  --chart-2: 200 18% 33%;
+  --chart-3: 45 100% 51%;
+  --chart-4: 211 100% 50%;
+  --chart-5: 130 40% 50%;
+  
+  /* Sidebar colors */
+  --sidebar-background: 237 77% 31%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 0 0% 100%;
+  --sidebar-primary-foreground: 237 77% 31%;
+  --sidebar-accent: 45 100% 51%;
+  --sidebar-accent-foreground: 0 0% 0%;
+  --sidebar-border: 237 50% 45%;
+  --sidebar-ring: 237 50% 45%;
+}
+
+.dark {
+  --background: 224 71.4% 4.1%;
+  --foreground: 210 20% 98%;
+  --muted: 215 27.9% 16.9%;
+  --muted-foreground: 217.9 10.6% 64.9%;
+  --popover: 224 71.4% 4.1%;
+  --popover-foreground: 210 20% 98%;
+  --card: 224 71.4% 4.1%;
+  --card-foreground: 210 20% 98%;
+  --border: 215 27.9% 16.9%;
+  --input: 215 27.9% 16.9%;
+  --primary: 237 77% 31%;  /* #1A237E (deep blue) */
+  --primary-foreground: 210 20% 98%;
+  --secondary: 215 27.9% 16.9%;
+  --secondary-foreground: 210 20% 98%;
+  --accent: 45 100% 51%;  /* #FFC107 (gold) */
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 20% 98%;
+  --ring: 216 34% 17%;
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Merriweather', serif;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+.prose {
+  max-width: 800px;
+  font-family: 'Source Sans Pro', sans-serif;
+  color: #212121;
+  line-height: 1.7;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  font-family: 'Merriweather', serif;
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose a {
+  color: var(--primary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.prose a:hover {
+  border-bottom-color: var(--primary);
+}
+
+.prose blockquote {
+  border-left: 4px solid var(--primary);
+  padding-left: 1rem;
+  font-style: italic;
+  margin: 1.5rem 0;
+}
+
+.prose ul, .prose ol {
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.prose img {
+  border-radius: 0.5rem;
+  max-width: 100%;
+  height: auto;
+}
