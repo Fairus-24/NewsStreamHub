@@ -6,14 +6,22 @@ import { Search } from 'lucide-react';
 import MostReadItem from '@/components/articles/MostReadItem';
 import { useQuery } from '@tanstack/react-query';
 
+// Define types for API responses
+interface ArticleItem {
+  id: string;
+  title: string;
+  createdAt: string;
+  viewCount: number;
+}
+
 export default function Sidebar() {
   const [searchQuery, setSearchQuery] = useState('');
   
-  const { data: mostReadArticles, isLoading: isLoadingMostRead } = useQuery({
+  const { data: mostReadArticles = [], isLoading: isLoadingMostRead } = useQuery<ArticleItem[]>({
     queryKey: ['/api/articles/most-read'],
   });
   
-  const { data: popularTopics } = useQuery({
+  const { data: popularTopics = [] } = useQuery<string[]>({
     queryKey: ['/api/topics/popular'],
   });
 
@@ -31,7 +39,8 @@ export default function Sidebar() {
     '#SportChampions'
   ];
   
-  const topics = popularTopics || defaultTopics;
+  // Use fetched topics or fallback to defaults
+  const topics: string[] = popularTopics.length > 0 ? popularTopics : defaultTopics;
 
   return (
     <aside className="lg:w-1/3 space-y-8">
@@ -61,7 +70,7 @@ export default function Sidebar() {
       <div className="bg-white p-5 rounded-lg shadow-sm border border-border-gray">
         <h3 className="font-headline font-bold text-lg mb-4">Popular Topics</h3>
         <div className="flex flex-wrap gap-2">
-          {topics.map((topic, index) => (
+          {topics.map((topic: string, index: number) => (
             <Link 
               key={index} 
               href={`/search?q=${encodeURIComponent(topic.replace('#', ''))}`}
@@ -78,7 +87,7 @@ export default function Sidebar() {
         <h3 className="font-headline font-bold text-lg mb-4">Most Read</h3>
         <div className="space-y-4">
           {isLoadingMostRead ? (
-            Array(5).fill(0).map((_, i) => (
+            Array(5).fill(0).map((_, i: number) => (
               <div key={i} className="flex items-start animate-pulse">
                 <div className="text-2xl font-headline font-bold text-accent mr-4">{i + 1}</div>
                 <div className="flex-1">
@@ -88,7 +97,7 @@ export default function Sidebar() {
               </div>
             ))
           ) : (
-            mostReadArticles?.map((article, index) => (
+            mostReadArticles.map((article: ArticleItem, index: number) => (
               <MostReadItem
                 key={article.id}
                 rank={index + 1}

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
-import type { User } from '@/types/user';
 import {
   DropdownMenu,
   DropdownMenuContent,
