@@ -62,10 +62,12 @@ export default function Sidebar() {
         <h3 className="font-headline font-bold text-lg mb-4">Popular Topics</h3>
         <div className="flex flex-wrap gap-2">
           {topics.map((topic, index) => (
-            <Link key={index} href={`/search?q=${encodeURIComponent(topic.replace('#', ''))}`}>
-              <a className="px-3 py-1 bg-light-gray rounded-full text-secondary text-sm hover:bg-primary hover:text-white transition-colors duration-300">
-                {topic}
-              </a>
+            <Link 
+              key={index} 
+              href={`/search?q=${encodeURIComponent(topic.replace('#', ''))}`}
+              className="px-3 py-1 bg-light-gray rounded-full text-secondary text-sm hover:bg-primary hover:text-white transition-colors duration-300"
+            >
+              {topic}
             </Link>
           ))}
         </div>
