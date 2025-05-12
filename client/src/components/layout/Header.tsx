@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
+import type { User } from '@/types/user';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,15 +136,14 @@ export default function Header() {
           <ul className="flex space-x-6 whitespace-nowrap">
             {categories.map((category) => (
               <li key={category.slug}>
-                <Link href={category.slug ? `/category/${category.slug}` : '/'}>
-                  <a className={`font-ui font-medium ${
+                <Link href={category.slug ? `/category/${category.slug}` : '/'} 
+                  className={`font-ui font-medium ${
                     (location === '/' && category.slug === '') || 
                     (location.includes(`/category/${category.slug}`) && category.slug !== '')
                       ? 'text-primary border-b-2 border-primary pb-2' 
                       : 'text-secondary hover:text-primary pb-2'
                   }`}>
                     {category.name}
-                  </a>
                 </Link>
               </li>
             ))}
@@ -186,16 +186,16 @@ export default function Header() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Link href="/profile">
-                    <a className="block p-2 rounded-md hover:bg-light-gray text-sm font-ui">Your Profile</a>
+                  <Link href="/profile" className="block p-2 rounded-md hover:bg-light-gray text-sm font-ui">
+                    Your Profile
                   </Link>
-                  <Link href="/bookmarks">
-                    <a className="block p-2 rounded-md hover:bg-light-gray text-sm font-ui">Bookmarks</a>
+                  <Link href="/bookmarks" className="block p-2 rounded-md hover:bg-light-gray text-sm font-ui">
+                    Bookmarks
                   </Link>
                   
                   {isAdmin && (
-                    <Link href="/admin">
-                      <a className="block p-2 rounded-md bg-primary bg-opacity-10 text-primary text-sm font-ui mt-2">Admin Dashboard</a>
+                    <Link href="/admin" className="block p-2 rounded-md bg-primary bg-opacity-10 text-primary text-sm font-ui mt-2">
+                      Admin Dashboard
                     </Link>
                   )}
                   
