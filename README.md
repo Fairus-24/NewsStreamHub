@@ -125,11 +125,10 @@ Fairus – [GitHub @Fairus-24](https://github.com/Fairus-24)
 
 ---
 
-```
-
 ## 🔧 Catatan:
 - Jika kamu menggunakan port, endpoint, atau struktur folder yang berbeda, saya bisa bantu ubah agar sesuai.
 - Untuk membuat tampilannya lebih hidup, kamu bisa menambahkan **GIF demo**, **badge CI/CD**, atau **deploy link** (jika di-hosting).
 
 Mau saya bantu generate versi README ini langsung jadi file `.md` atau tambah ikon/tampilan lainnya?
+
 ```
