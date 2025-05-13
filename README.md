@@ -102,7 +102,14 @@ Di `client/package.json`, pastikan ada baris berikut:
 
 ## 📸 Tampilan (Screenshot)
 
-> *(Tambahkan screenshot antarmuka aplikasi di sini jika ada)*
+▶️ Klik di sini untuk menonton dokumentasi video
+
+---
+
+## 📸 Dokumentasi Video
+
+🎬 **Video Dokumentasi:**
+- [Klik di sini untuk menonton dokumentasi proyek (YouTube / Drive)](https://drive.google.com/file/d/1ogk7dbrKd7RasTKFXsVER20lBFUGblnL/view?usp=sharing)
 
 ---
 
@@ -128,7 +135,5 @@ Fairus – [GitHub @Fairus-24](https://github.com/Fairus-24)
 ## 🔧 Catatan:
 - Jika kamu menggunakan port, endpoint, atau struktur folder yang berbeda, saya bisa bantu ubah agar sesuai.
 - Untuk membuat tampilannya lebih hidup, kamu bisa menambahkan **GIF demo**, **badge CI/CD**, atau **deploy link** (jika di-hosting).
-
-Mau saya bantu generate versi README ini langsung jadi file `.md` atau tambah ikon/tampilan lainnya?
 
 ```
