@@ -102,8 +102,15 @@ Di `client/package.json`, pastikan ada baris berikut:
 
 ## 📸 Tampilan (Screenshot)
 
-<img src="./assets/homepage.png" alt="Tampilan Homepage" width="600"/>
-<img src="./assets/news-detail.png" alt="Detail Berita" width="600"/>
+## **HomePage** <br>
+<figure style="margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2); display: inline-block;">
+  <img src="./assets/homepage.png" alt="Tampilan Homepage" width="600"/>
+</figure>
+
+## **News-Detail** <br>
+<figure style="margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2); display: inline-block;">
+  <img src="./assets/news-detail.png" alt="Detail Berita" width="600"/>
+</figure>
 
 ---
 
@@ -112,7 +119,8 @@ Di `client/package.json`, pastikan ada baris berikut:
 🎬 **Video Dokumentasi:**
 <video width="600" controls>
   <source src="./assets/demo.mp4" type="video/mp4">
-  Your browser does not support the video tag.(https://drive.google.com/file/d/1ogk7dbrKd7RasTKFXsVER20lBFUGblnL/view?usp=sharing)
+  Your browser does not support the video tag. <br>
+  Go to ===> (https://drive.google.com/file/d/1ogk7dbrKd7RasTKFXsVER20lBFUGblnL/view?usp=sharing)
 </video>
 
 ---
