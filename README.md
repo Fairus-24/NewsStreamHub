@@ -102,14 +102,18 @@ Di `client/package.json`, pastikan ada baris berikut:
 
 ## 📸 Tampilan (Screenshot)
 
-▶️ Klik di sini untuk menonton dokumentasi video
+<img src="./assets/homepage.png" alt="Tampilan Homepage" width="600"/>
+<img src="./assets/news-detail.png" alt="Detail Berita" width="600"/>
 
 ---
 
 ## 📸 Dokumentasi Video
 
 🎬 **Video Dokumentasi:**
-- [Klik di sini untuk menonton dokumentasi proyek (YouTube / Drive)](https://drive.google.com/file/d/1ogk7dbrKd7RasTKFXsVER20lBFUGblnL/view?usp=sharing)
+<video width="600" controls>
+  <source src="./assets/demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.(https://drive.google.com/file/d/1ogk7dbrKd7RasTKFXsVER20lBFUGblnL/view?usp=sharing)
+</video>
 
 ---
 
