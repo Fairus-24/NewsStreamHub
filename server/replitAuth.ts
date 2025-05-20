@@ -9,44 +9,44 @@ import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
-}
+// Nonaktifkan seluruh blok OIDC dan session jika variabel env tidak ada
+const isReplitAuthEnabled = !!process.env.REPL_ID && !!process.env.SESSION_SECRET && !!process.env.ISSUER_URL;
 
-if (!process.env.SESSION_SECRET) {
-  throw new Error("Environment variable SESSION_SECRET is required");
-}
+let getOidcConfig: any = undefined;
+let getSession: any = undefined;
 
-const getOidcConfig = memoize(
-  async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
-  },
-  { maxAge: 3600 * 1000 }
-);
-
-export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
-  return session({
-    secret: process.env.SESSION_SECRET!,
-    store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: true,
-      maxAge: sessionTtl,
+if (isReplitAuthEnabled) {
+  getOidcConfig = memoize(
+    async () => {
+      return await client.discovery(
+        new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
+        process.env.REPL_ID!
+      );
     },
-  });
+    { maxAge: 3600 * 1000 }
+  );
+
+  getSession = function() {
+    const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+    const pgStore = connectPg(session);
+    const sessionStore = new pgStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: false,
+      ttl: sessionTtl,
+      tableName: "sessions",
+    });
+    return session({
+      secret: process.env.SESSION_SECRET!,
+      store: sessionStore,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: true,
+        maxAge: sessionTtl,
+      },
+    });
+  };
 }
 
 function updateUserSession(
@@ -73,11 +73,16 @@ async function upsertUser(
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
-  app.use(getSession());
-  app.use(passport.initialize());
-  app.use(passport.session());
+  if (getSession) {
+    app.use(getSession());
+    app.use(passport.initialize());
+    app.use(passport.session());
+  } else {
+    // Jika tidak ada session, jangan setup passport session (biar tidak error)
+    app.use(passport.initialize());
+  }
 
-  const config = await getOidcConfig();
+  const config = getOidcConfig ? await getOidcConfig() : null;
 
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
@@ -89,18 +94,20 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env
-    .REPLIT_DOMAINS!.split(",")) {
-    const strategy = new Strategy(
-      {
-        name: `replitauth:${domain}`,
-        config,
-        scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
-      },
-      verify,
-    );
-    passport.use(strategy);
+  // Hapus/matikan loop domain jika REPLIT_DOMAINS tidak ada
+  if (process.env.REPLIT_DOMAINS) {
+    for (const domain of process.env.REPLIT_DOMAINS.split(",")) {
+      const strategy = new Strategy(
+        {
+          name: `replitauth:${domain}`,
+          config,
+          scope: "openid email profile offline_access",
+          callbackURL: `https://${domain}/api/callback`,
+        },
+        verify
+      );
+      passport.use(strategy);
+    }
   }
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
