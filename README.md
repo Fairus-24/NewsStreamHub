@@ -47,7 +47,15 @@ cd NewsStreamHub
 
 ### 2. Install Dependensi
 
-#### 🔹 Backend (Node.js)
+#### 🔹Fullstack
+```bash
+npm install
+npm run db:push
+npm run seed
+npm run dev
+```
+
+#### 🔹 Backend (Ekspress.js)
 
 ```bash
 cd server
