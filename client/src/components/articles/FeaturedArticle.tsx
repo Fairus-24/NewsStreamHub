@@ -94,14 +94,16 @@ export default function FeaturedArticle({
   return (
     <section className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
       <div className="md:flex">
-        <div className="md:w-2/3 relative">
+        <div className="md:w-2/3 relative flex items-stretch">
           <Link href={`/article/${id}`}>
-            <a>
-              <img 
-                src={image} 
-                alt={title} 
-                className="w-full h-full object-cover"
-              />
+            <a className="block w-full h-full">
+              <div className="aspect-w-16 aspect-h-6 w-full h-full">
+                <img 
+                  src={image} 
+                  alt={title} 
+                  className="w-full h-full object-cover rounded-md min-h-[220px] md:min-h-[384px] max-h-[450px]"
+                />
+              </div>
             </a>
           </Link>
           {isBreaking && (

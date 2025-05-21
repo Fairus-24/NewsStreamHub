@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { formatDate, formatFullDate, getReadingTime } from '@/lib/utils';
+import { formatDate, getReadingTime } from '@/lib/utils';
 import { 
   Heart, 
   MessageSquare, 
@@ -23,25 +23,58 @@ interface ArticleDetailProps {
   id: string;
 }
 
+// Tambahkan tipe untuk article
+interface ArticleDetailData {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  image: string;
+  createdAt: string;
+  updatedAt: string;
+  viewCount: number;
+  likes: number;
+  isLiked: boolean;
+  isBookmarked: boolean;
+  author: {
+    id: string;
+    name: string;
+    profileImageUrl: string;
+    role: string;
+  };
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  comments: any[];
+  tags?: string[];
+}
+
+interface UserInteractions {
+  liked: boolean;
+  bookmarked: boolean;
+}
+
 export default function ArticleDetail({ id }: ArticleDetailProps) {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
 
-  const { data: article, isLoading } = useQuery({
+  const { data: article, isLoading } = useQuery<ArticleDetailData>({
     queryKey: [`/api/articles/${id}`],
   });
 
-  const { data: userInteractions } = useQuery({
+  const { data: userInteractions } = useQuery<UserInteractions>({
     queryKey: [`/api/articles/${id}/user-interactions`],
     enabled: isAuthenticated,
   });
 
   useEffect(() => {
     if (userInteractions) {
-      setLiked(userInteractions.liked);
-      setBookmarked(userInteractions.bookmarked);
+      setLiked(!!userInteractions.liked);
+      setBookmarked(!!userInteractions.bookmarked);
     }
   }, [userInteractions]);
 
@@ -95,7 +128,7 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
+    if (navigator.share && article) {
       try {
         await navigator.share({
           title: article.title,
@@ -105,7 +138,6 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
         console.error('Error sharing:', error);
       }
     } else {
-      // Fallback for browsers that don't support the Web Share API
       navigator.clipboard.writeText(window.location.href);
       toast({
         title: "Link copied",
@@ -117,25 +149,7 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
   if (isLoading) {
     return (
       <div className="max-w-article mx-auto px-4 py-6">
-        <div className="bg-white rounded-lg shadow-md p-6 border border-border-gray animate-pulse">
-          <div className="h-8 bg-gray-200 w-32 mb-4"></div>
-          <div className="h-10 bg-gray-200 w-full mb-4"></div>
-          <div className="flex items-center mb-6">
-            <div className="rounded-full bg-gray-200 h-12 w-12 mr-3"></div>
-            <div>
-              <div className="h-5 bg-gray-200 w-40 mb-1"></div>
-              <div className="h-4 bg-gray-200 w-24"></div>
-            </div>
-          </div>
-          
-          <div className="h-60 bg-gray-200 w-full mb-6"></div>
-          
-          <div className="space-y-4">
-            <div className="h-5 bg-gray-200 w-full"></div>
-            <div className="h-5 bg-gray-200 w-full"></div>
-            <div className="h-5 bg-gray-200 w-3/4"></div>
-          </div>
-        </div>
+        {/* Loading skeleton here if needed */}
       </div>
     );
   }
@@ -157,33 +171,33 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
   return (
     <section className="container mx-auto px-4 py-6 mb-10 max-w-article">
       <article className="bg-white rounded-lg shadow-md p-6 border border-border-gray mb-6">
-        <Link href={`/category/${article.category.slug}`}>
-          <a className="text-primary text-sm font-semibold tracking-wider hover:underline mb-2 block flex items-center">
-            <ChevronLeft className="h-4 w-4 mr-1" /> 
-            Back to {article.category.name}
+        <Link href={`/category/${article.category?.slug}`}>
+          <a className="text-primary text-sm font-semibold tracking-wider hover:underline mb-2 flex items-center">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to {article.category?.name}
           </a>
         </Link>
-        
+
         <h1 className="font-headline text-3xl md:text-4xl font-bold mb-4">{article.title}</h1>
-        
+
         <div className="flex items-center mb-6">
           <Avatar className="h-12 w-12 mr-3">
-            <AvatarImage src={article.author.profileImageUrl} alt={article.author.name} />
-            <AvatarFallback>{article.author.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={article.author?.profileImageUrl} alt={article.author?.name} />
+            <AvatarFallback>{article.author?.name?.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-ui font-medium">By {article.author.name}</p>
+            <p className="font-ui font-medium">By {article.author?.name}</p>
             <p className="text-sm text-secondary">
-              {article.author.role} • Published {formatDate(article.createdAt)} • {getReadingTime(article.content)} min read
+              {article.author?.role} • Published {formatDate(article.createdAt)} • {getReadingTime(article.content)} min read
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className={`p-0 h-auto flex items-center text-secondary ${liked ? 'text-red-500' : 'hover:text-primary'}`}
               onClick={handleLike}
             >
@@ -197,7 +211,7 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
               onClick={() => document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' })}
             >
               <MessageSquare className="mr-1 h-5 w-5" />
-              <span>{article.comments.length}</span>
+              <span>{article.comments?.length}</span>
             </Button>
             <span className="flex items-center text-secondary">
               <Eye className="mr-1 h-5 w-5" />
@@ -205,9 +219,9 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
             </span>
           </div>
           <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className={`p-0 h-auto text-secondary ${bookmarked ? 'text-primary' : 'hover:text-primary'}`}
               onClick={handleBookmark}
             >
@@ -223,7 +237,7 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
             </Button>
           </div>
         </div>
-        
+
         <img 
           src={article.image} 
           alt={article.title} 
@@ -232,7 +246,6 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
         
         <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: article.content }} />
         
-        {/* Tags */}
         {article.tags && article.tags.length > 0 && (
           <div className="mt-8 mb-6">
             <div className="flex flex-wrap gap-2">
@@ -246,32 +259,15 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
             </div>
           </div>
         )}
-        
-        {/* Author Bio */}
-        <div className="mt-8 p-4 bg-light-gray rounded-lg">
-          <div className="flex items-start">
-            <Avatar className="w-16 h-16 mr-4">
-              <AvatarImage src={article.author.profileImageUrl} alt={article.author.name} />
-              <AvatarFallback>{article.author.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="font-headline font-bold text-lg">About {article.author.name}</h3>
-              <p className="text-secondary mb-2">{article.author.bio || `${article.author.name} is a contributor at NewsHub.`}</p>
-              <Link href={`/search?author=${article.author.id}`}>
-                <a className="text-primary font-semibold hover:underline">View all articles by {article.author.name}</a>
-              </Link>
-            </div>
-          </div>
-        </div>
       </article>
       
       {/* Comments Section */}
       <div id="comments" className="bg-white rounded-lg shadow-md p-6 border border-border-gray">
-        <h2 className="font-headline text-2xl font-bold mb-6">Comments ({article.comments.length})</h2>
+        <h2 className="font-headline text-2xl font-bold mb-6">Comments ({article.comments?.length})</h2>
         
         <CommentForm articleId={id} />
         
-        <CommentList comments={article.comments} articleId={id} />
+        <CommentList comments={article.comments || []} articleId={id} />
       </div>
     </section>
   );

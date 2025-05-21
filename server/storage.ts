@@ -26,6 +26,21 @@ import { db } from "./db";
 import { eq, and, desc, isNull, like, or, sql, inArray, count, max, min, sum, gt, lt } from "drizzle-orm";
 import { generateSlug } from "./utils";
 
+// --- Fix for author object returned to frontend ---
+// Helper to build frontend author object
+function buildFrontendAuthor(author: any): any {
+  if (!author) {
+    return { id: '', name: 'Unknown', avatar: '', profileImageUrl: '', role: '' };
+  }
+  return {
+    id: author.id,
+    name: author.username || ((author.firstName || '') + ' ' + (author.lastName || '')).trim() || 'Unknown',
+    avatar: author.profileImageUrl || '',
+    profileImageUrl: author.profileImageUrl || '',
+    role: author.role || '',
+  };
+}
+
 // Interface for storage operations
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -104,13 +119,13 @@ export class DatabaseStorage implements IStorage {
         .insert(users)
         .values({
           ...userData,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .onConflictDoUpdate({
           target: users.id,
           set: {
             ...userData,
-            updatedAt: new Date(),
+            updatedAt: new Date().toISOString(),
           },
         })
         .returning();
@@ -174,20 +189,22 @@ export class DatabaseStorage implements IStorage {
           isLiked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id} AND ${articleLikes.userId} = ${userId})` : sql`false`,
           isBookmarked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${bookmarks} WHERE ${bookmarks.articleId} = ${articles.id} AND ${bookmarks.userId} = ${userId})` : sql`false`,
           commentsCount: sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.articleId} = ${articles.id})`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
-          author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)), 'profileImageUrl', u.profile_image_url) FROM ${users} u WHERE u.id = ${articles.authorId})`,
         })
         .from(articles)
         .where(and(
-          eq(articles.isBreaking, true),
+          eq(articles.isBreaking, 1),
           eq(articles.status, 'published')
         ))
         .orderBy(desc(articles.createdAt))
         .limit(1);
-        
+      
       if (breakingArticle) {
+        const [category] = await db.select().from(categories).where(eq(categories.id, breakingArticle.categoryId));
+        let [author] = await db.select().from(users).where(eq(users.id, breakingArticle.authorId));
         return {
-          ...(breakingArticle as any),
+          ...breakingArticle,
+          category,
+          author: buildFrontendAuthor(author),
           comments: await this.getArticleComments(breakingArticle.id, userId),
         } as any;
       }
@@ -209,8 +226,6 @@ export class DatabaseStorage implements IStorage {
           isLiked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id} AND ${articleLikes.userId} = ${userId})` : sql`false`,
           isBookmarked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${bookmarks} WHERE ${bookmarks.articleId} = ${articles.id} AND ${bookmarks.userId} = ${userId})` : sql`false`,
           commentsCount: sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.articleId} = ${articles.id})`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
-          author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.lastName)), 'profileImageUrl', u.profile_image_url) FROM ${users} u WHERE u.id = ${articles.authorId})`,
         })
         .from(articles)
         .where(eq(articles.status, 'published'))
@@ -218,8 +233,12 @@ export class DatabaseStorage implements IStorage {
         .limit(1);
       
       if (featuredArticle) {
+        const [category] = await db.select().from(categories).where(eq(categories.id, featuredArticle.categoryId));
+        let [author] = await db.select().from(users).where(eq(users.id, featuredArticle.authorId));
         return {
-          ...(featuredArticle as any),
+          ...featuredArticle,
+          category,
+          author: buildFrontendAuthor(author),
           comments: await this.getArticleComments(featuredArticle.id, userId),
         } as any;
       }
@@ -234,7 +253,6 @@ export class DatabaseStorage implements IStorage {
   async getTrendingArticles(page: number, userId?: string): Promise<{ articles: Article[], hasMore: boolean }> {
     try {
       const offset = (page - 1) * this.ITEMS_PER_PAGE;
-      
       const trendingArticles = await db
         .select({
           id: articles.id,
@@ -247,14 +265,14 @@ export class DatabaseStorage implements IStorage {
           isLiked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id} AND ${articleLikes.userId} = ${userId})` : sql`false`,
           isBookmarked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${bookmarks} WHERE ${bookmarks.articleId} = ${articles.id} AND ${bookmarks.userId} = ${userId})` : sql`false`,
           commentsCount: sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.articleId} = ${articles.id})`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
+          authorId: articles.authorId,
+          categoryId: articles.categoryId,
         })
         .from(articles)
         .where(eq(articles.status, 'published'))
         .orderBy(desc(articles.viewCount))
         .limit(this.ITEMS_PER_PAGE)
         .offset(offset);
-      
       // Get one more record to check if there are more articles
       const [hasMoreRecord] = await db
         .select({ count: sql<number>`count(*)` })
@@ -262,12 +280,17 @@ export class DatabaseStorage implements IStorage {
         .where(eq(articles.status, 'published'))
         .limit(1)
         .offset(offset + this.ITEMS_PER_PAGE);
-      
-      const result = await Promise.all(trendingArticles.map(async (article) => ({
-        ...(article as any),
-        comments: await this.getArticleComments(article.id, userId),
-      })));
-      
+      // Fetch category and author for each article
+      const result = await Promise.all(trendingArticles.map(async (article) => {
+        const [category] = await db.select().from(categories).where(eq(categories.id, article.categoryId));
+        const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+        return {
+          ...article,
+          category,
+          author: buildFrontendAuthor(author),
+          comments: await this.getArticleComments(article.id, userId),
+        };
+      }));
       return {
         articles: result as any[],
         hasMore: !!hasMoreRecord?.count && hasMoreRecord.count > 0,
@@ -277,11 +300,10 @@ export class DatabaseStorage implements IStorage {
       return { articles: [], hasMore: false };
     }
   }
-  
+
   async getLatestArticles(page: number, userId?: string): Promise<{ articles: Article[], hasMore: boolean }> {
     try {
       const offset = (page - 1) * this.ITEMS_PER_PAGE;
-      
       const latestArticles = await db
         .select({
           id: articles.id,
@@ -294,14 +316,14 @@ export class DatabaseStorage implements IStorage {
           isLiked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id} AND ${articleLikes.userId} = ${userId})` : sql`false`,
           isBookmarked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${bookmarks} WHERE ${bookmarks.articleId} = ${articles.id} AND ${bookmarks.userId} = ${userId})` : sql`false`,
           commentsCount: sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.articleId} = ${articles.id})`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
+          authorId: articles.authorId,
+          categoryId: articles.categoryId,
         })
         .from(articles)
         .where(eq(articles.status, 'published'))
         .orderBy(desc(articles.createdAt))
         .limit(this.ITEMS_PER_PAGE)
         .offset(offset);
-      
       // Get one more record to check if there are more articles
       const [hasMoreRecord] = await db
         .select({ count: sql<number>`count(*)` })
@@ -309,12 +331,17 @@ export class DatabaseStorage implements IStorage {
         .where(eq(articles.status, 'published'))
         .limit(1)
         .offset(offset + this.ITEMS_PER_PAGE);
-      
-      const result = await Promise.all(latestArticles.map(async (article) => ({
-        ...(article as any),
-        comments: await this.getArticleComments(article.id, userId),
-      })));
-      
+      // Fetch category and author for each article
+      const result = await Promise.all(latestArticles.map(async (article) => {
+        const [category] = await db.select().from(categories).where(eq(categories.id, article.categoryId));
+        const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+        return {
+          ...article,
+          category,
+          author: buildFrontendAuthor(author),
+          comments: await this.getArticleComments(article.id, userId),
+        };
+      }));
       return {
         articles: result as any[],
         hasMore: !!hasMoreRecord?.count && hasMoreRecord.count > 0,
@@ -371,7 +398,6 @@ export class DatabaseStorage implements IStorage {
           isLiked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id} AND ${articleLikes.userId} = ${userId})` : sql`false`,
           isBookmarked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${bookmarks} WHERE ${bookmarks.articleId} = ${articles.id} AND ${bookmarks.userId} = ${userId})` : sql`false`,
           commentsCount: sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.articleId} = ${articles.id})`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
         })
         .from(articles)
         .where(and(
@@ -428,8 +454,6 @@ export class DatabaseStorage implements IStorage {
           likes: sql<number>`(SELECT COUNT(*) FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id})`,
           isLiked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id} AND ${articleLikes.userId} = ${userId})` : sql`false`,
           isBookmarked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${bookmarks} WHERE ${bookmarks.articleId} = ${articles.id} AND ${bookmarks.userId} = ${userId})` : sql`false`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
-          author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)), 'profileImageUrl', u.profile_image_url, 'role', u.role, 'bio', u.bio) FROM ${users} u WHERE u.id = ${articles.authorId})`,
         })
         .from(articles)
         .where(eq(articles.id, parseInt(id)));
@@ -437,6 +461,8 @@ export class DatabaseStorage implements IStorage {
       if (!article) {
         return undefined;
       }
+      const [category] = await db.select().from(categories).where(eq(categories.id, article.categoryId));
+      const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
       
       // Get article tags
       const articleTagsResult = await db
@@ -453,6 +479,8 @@ export class DatabaseStorage implements IStorage {
       
       return {
         ...(article as any),
+        category,
+        author: buildFrontendAuthor(author),
         tags: tagNames,
         comments,
       } as any;
@@ -474,7 +502,6 @@ export class DatabaseStorage implements IStorage {
           likes: comments.likes,
           dislikes: comments.dislikes,
           isAuthor: sql<boolean>`EXISTS (SELECT 1 FROM ${articles} WHERE ${articles.id} = ${articleId} AND ${articles.authorId} = ${comments.authorId})`,
-          author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)), 'profileImageUrl', u.profile_image_url, 'role', u.role) FROM ${users} u WHERE u.id = ${comments.authorId})`,
         })
         .from(comments)
         .where(and(
@@ -484,8 +511,10 @@ export class DatabaseStorage implements IStorage {
         ))
         .orderBy(desc(comments.createdAt));
       
-      // Get replies for each top-level comment
-      const commentsWithReplies = await Promise.all(topLevelComments.map(async (comment) => {
+      // Fetch author info for each comment
+      const commentsWithAuthors = await Promise.all(topLevelComments.map(async (comment) => {
+        const [author] = await db.select().from(users).where(eq(users.id, comment.authorId));
+        // Get replies
         const replies = await db
           .select({
             id: comments.id,
@@ -495,7 +524,6 @@ export class DatabaseStorage implements IStorage {
             likes: comments.likes,
             dislikes: comments.dislikes,
             isAuthor: sql<boolean>`EXISTS (SELECT 1 FROM ${articles} WHERE ${articles.id} = ${articleId} AND ${articles.authorId} = ${comments.authorId})`,
-            author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)), 'profileImageUrl', u.profile_image_url, 'role', u.role) FROM ${users} u WHERE u.id = ${comments.authorId})`,
           })
           .from(comments)
           .where(and(
@@ -503,14 +531,14 @@ export class DatabaseStorage implements IStorage {
             eq(comments.status, 'approved')
           ))
           .orderBy(comments.createdAt);
-        
-        return {
-          ...comment,
-          replies,
-        };
+        // Fetch author info for each reply
+        const repliesWithAuthors = await Promise.all(replies.map(async (reply) => {
+          const [replyAuthor] = await db.select().from(users).where(eq(users.id, reply.authorId));
+          return { ...reply, author: buildFrontendAuthor(replyAuthor) };
+        }));
+        return { ...comment, author: buildFrontendAuthor(author), replies: repliesWithAuthors };
       }));
-      
-      return commentsWithReplies;
+      return commentsWithAuthors;
     } catch (error) {
       console.error("Error fetching article comments:", error);
       return [];
@@ -703,7 +731,7 @@ export class DatabaseStorage implements IStorage {
           image: articleData.image,
           categoryId: articleData.categoryId,
           isBreaking: articleData.isBreaking || false,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(articles.id, parseInt(id)))
         .returning();
@@ -804,7 +832,6 @@ export class DatabaseStorage implements IStorage {
           isLiked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id} AND ${articleLikes.userId} = ${userId})` : sql`false`,
           isBookmarked: userId ? sql<boolean>`EXISTS (SELECT 1 FROM ${bookmarks} WHERE ${bookmarks.articleId} = ${articles.id} AND ${bookmarks.userId} = ${userId})` : sql`false`,
           commentsCount: sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.articleId} = ${articles.id})`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
         })
         .from(articles)
         .where(and(
@@ -848,7 +875,7 @@ export class DatabaseStorage implements IStorage {
           eq(settings.key, 'requireModeration')
         ));
       
-      if (settingsRecord && settingsRecord.value === false) {
+      if (settingsRecord && settingsRecord.value === "false") {
         status = 'approved';
       }
       
@@ -885,7 +912,7 @@ export class DatabaseStorage implements IStorage {
         .update(comments)
         .set({
           content,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(comments.id, parseInt(id)))
         .returning();
@@ -1144,7 +1171,6 @@ export class DatabaseStorage implements IStorage {
           isLiked: sql<boolean>`EXISTS (SELECT 1 FROM ${articleLikes} WHERE ${articleLikes.articleId} = ${articles.id} AND ${articleLikes.userId} = ${userId})`,
           isBookmarked: sql<boolean>`true`,
           commentsCount: sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.articleId} = ${articles.id})`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
         })
         .from(articles)
         .innerJoin(bookmarks, eq(articles.id, bookmarks.articleId))
@@ -1215,7 +1241,7 @@ export class DatabaseStorage implements IStorage {
           username: data.username,
           bio: data.bio,
           profileImageUrl: data.profileImageUrl,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(users.id, userId))
         .returning();
@@ -1293,11 +1319,10 @@ export class DatabaseStorage implements IStorage {
       if (existingPreferences) {
         await db
           .update(userPreferences)
-          .set({
-            newsletter: preferences.newsletter,
+          .set({            newsletter: preferences.newsletter,
             commentReplies: preferences.commentReplies,
             articleUpdates: preferences.articleUpdates,
-            updatedAt: new Date(),
+            updatedAt: new Date().toISOString(),
           })
           .where(eq(userPreferences.userId, userId));
       } else {
@@ -1325,12 +1350,13 @@ export class DatabaseStorage implements IStorage {
         .from(articles);
       
       const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+const oneMonthAgoIso = oneMonthAgo.toISOString();
       
       const [newArticleCount] = await db
         .select({ count: sql<number>`count(*)` })
         .from(articles)
-        .where(gt(articles.createdAt, oneMonthAgo));
+        .where(gt(articles.createdAt, oneMonthAgoIso));
       
       // Get comment count and growth
       const [commentCount] = await db
@@ -1340,7 +1366,7 @@ export class DatabaseStorage implements IStorage {
       const [newCommentCount] = await db
         .select({ count: sql<number>`count(*)` })
         .from(comments)
-        .where(gt(comments.createdAt, oneMonthAgo));
+        .where(gt(comments.createdAt, oneMonthAgoIso));
       
       // Get user count and growth
       const [userCount] = await db
@@ -1350,7 +1376,7 @@ export class DatabaseStorage implements IStorage {
       const [newUserCount] = await db
         .select({ count: sql<number>`count(*)` })
         .from(users)
-        .where(gt(users.createdAt, oneMonthAgo));
+        .where(gt(users.createdAt, oneMonthAgoIso));
       
       // Get page views and growth
       const [viewCount] = await db
@@ -1360,7 +1386,7 @@ export class DatabaseStorage implements IStorage {
       const [newViewCount] = await db
         .select({ count: sql<number>`count(*)` })
         .from(articleViews)
-        .where(gt(articleViews.createdAt, oneMonthAgo));
+        .where(gt(articleViews.createdAt, oneMonthAgoIso));
       
       // Calculate growth percentages
       const prevArticleCount = articleCount.count - newArticleCount.count;
@@ -1442,22 +1468,33 @@ export class DatabaseStorage implements IStorage {
       const totalPages = Math.ceil(totalCount / this.ITEMS_PER_PAGE);
       
       // Get articles
-      const adminArticles = await db
+      const adminArticlesRaw = await db
         .select({
           id: articles.id,
           title: articles.title,
           createdAt: articles.createdAt,
           viewCount: articles.viewCount,
           commentCount: sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.articleId} = ${articles.id})`,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name, 'slug', c.slug) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
-          author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name))) FROM ${users} u WHERE u.id = ${articles.authorId})`,
+          categoryId: articles.categoryId,
+          authorId: articles.authorId,
         })
         .from(articles)
         .where(whereClause)
         .orderBy(desc(articles.createdAt))
         .limit(this.ITEMS_PER_PAGE)
         .offset(offset);
-      
+
+      // Build nested objects in JS
+      const adminArticles = await Promise.all(adminArticlesRaw.map(async (article) => {
+        const [category] = await db.select().from(categories).where(eq(categories.id, article.categoryId));
+        const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+        return {
+          ...article,
+          category,
+          author: buildFrontendAuthor(author),
+        };
+      }));
+
       return {
         articles: adminArticles as any[],
         totalPages,
@@ -1470,19 +1507,31 @@ export class DatabaseStorage implements IStorage {
   
   async getRecentArticles(limit: number = 3): Promise<any[]> {
     try {
-      const recentArticles = await db
+      // Get recent articles as flat rows
+      const recentArticlesRaw = await db
         .select({
           id: articles.id,
           title: articles.title,
           createdAt: articles.createdAt,
           viewCount: articles.viewCount,
-          category: sql<any>`(SELECT json_build_object('id', c.id, 'name', c.name) FROM ${categories} c WHERE c.id = ${articles.categoryId})`,
-          author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name))) FROM ${users} u WHERE u.id = ${articles.authorId})`,
+          categoryId: articles.categoryId,
+          authorId: articles.authorId,
         })
         .from(articles)
         .orderBy(desc(articles.createdAt))
         .limit(limit);
-      
+
+      // Build nested objects in JS
+      const recentArticles = await Promise.all(recentArticlesRaw.map(async (article) => {
+        const [category] = await db.select().from(categories).where(eq(categories.id, article.categoryId));
+        const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+        return {
+          ...article,
+          category,
+          author: buildFrontendAuthor(author),
+        };
+      }));
+
       return recentArticles as any[];
     } catch (error) {
       console.error("Error fetching recent articles:", error);
@@ -1501,19 +1550,31 @@ export class DatabaseStorage implements IStorage {
         );
       }
       
-      const filteredComments = await db
+      // Get filtered comments as flat rows
+      const filteredCommentsRaw = await db
         .select({
           id: comments.id,
           content: comments.content,
           status: comments.status,
           createdAt: comments.createdAt,
-          author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.last_name)), 'profileImageUrl', u.profile_image_url, 'role', u.role) FROM ${users} u WHERE u.id = ${comments.authorId})`,
-          article: sql<any>`(SELECT json_build_object('id', a.id, 'title', a.title) FROM ${articles} a WHERE a.id = ${comments.articleId})`,
+          authorId: comments.authorId,
+          articleId: comments.articleId,
         })
         .from(comments)
         .where(whereClause)
         .orderBy(desc(comments.createdAt));
-      
+
+      // Build nested objects in JS
+      const filteredComments = await Promise.all(filteredCommentsRaw.map(async (comment) => {
+        const [author] = await db.select().from(users).where(eq(users.id, comment.authorId));
+        const [article] = await db.select().from(articles).where(eq(articles.id, comment.articleId));
+        return {
+          ...comment,
+          author: buildFrontendAuthor(author),
+          article: article ? { id: article.id, title: article.title } : undefined,
+        };
+      }));
+
       return filteredComments as any[];
     } catch (error) {
       console.error("Error fetching comments by status:", error);
@@ -1523,19 +1584,31 @@ export class DatabaseStorage implements IStorage {
   
   async getCommentsForModeration(limit: number = 5): Promise<Comment[]> {
     try {
-      const pendingComments = await db
+      // Get pending comments as flat rows
+      const pendingCommentsRaw = await db
         .select({
           id: comments.id,
           content: comments.content,
           createdAt: comments.createdAt,
-          author: sql<any>`(SELECT json_build_object('id', u.id, 'name', COALESCE(u.username, CONCAT(u.first_name, ' ', u.lastName)), 'profileImageUrl', u.profile_image_url) FROM ${users} u WHERE u.id = ${comments.authorId})`,
-          article: sql<any>`(SELECT json_build_object('id', a.id, 'title', a.title) FROM ${articles} a WHERE a.id = ${comments.articleId})`,
+          authorId: comments.authorId,
+          articleId: comments.articleId,
         })
         .from(comments)
         .where(eq(comments.status, 'pending'))
         .orderBy(comments.createdAt)
         .limit(limit);
-      
+
+      // Build nested objects in JS
+      const pendingComments = await Promise.all(pendingCommentsRaw.map(async (comment) => {
+        const [author] = await db.select().from(users).where(eq(users.id, comment.authorId));
+        const [article] = await db.select().from(articles).where(eq(articles.id, comment.articleId));
+        return {
+          ...comment,
+          author: buildFrontendAuthor(author),
+          article: article ? { id: article.id, title: article.title } : undefined,
+        };
+      }));
+
       return pendingComments as any[];
     } catch (error) {
       console.error("Error fetching comments for moderation:", error);
@@ -1565,7 +1638,7 @@ export class DatabaseStorage implements IStorage {
         .update(comments)
         .set({
           status,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(comments.id, parseInt(id)));
       
@@ -1575,7 +1648,7 @@ export class DatabaseStorage implements IStorage {
           .update(comments)
           .set({
             status: 'rejected',
-            updatedAt: new Date(),
+            updatedAt: new Date().toISOString(),
           })
           .where(eq(comments.parentId, parseInt(id)));
       }
@@ -1624,8 +1697,8 @@ export class DatabaseStorage implements IStorage {
           await db
             .update(settings)
             .set({
-              value,
-              updatedAt: new Date(),
+              value: typeof value === "string" ? value : JSON.stringify(value),
+              updatedAt: new Date().toISOString(),
             })
             .where(and(
               eq(settings.section, section),
@@ -1637,7 +1710,7 @@ export class DatabaseStorage implements IStorage {
             .values({
               section,
               key,
-              value,
+              value: typeof value === "string" ? value : JSON.stringify(value),
             });
         }
       }));

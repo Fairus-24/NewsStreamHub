@@ -1,16 +1,10 @@
 import {
-  pgTable,
+  sqliteTable as pgTable,
   text,
-  varchar,
-  timestamp,
-  jsonb,
-  index,
   integer,
-  boolean,
-  serial,
-  foreignKey,
   primaryKey,
-} from "drizzle-orm/pg-core";
+  uniqueIndex as index,
+} from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -19,25 +13,25 @@ import { z } from "zod";
 export const sessions = pgTable(
   "sessions",
   {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
+    sid: text("sid").primaryKey(),
+    sess: text("sess").notNull(),
+    expire: text("expire").notNull(),
   },
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
 // User storage table (required for Replit Auth)
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  username: varchar("username").unique(),
+  id: text("id").primaryKey().notNull(),
+  email: text("email").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  profileImageUrl: text("profile_image_url"),
+  username: text("username").unique(),
   bio: text("bio"),
-  role: varchar("role").default("user").notNull(), // user, admin, developer
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  role: text("role").default("user").notNull(), // user, admin, developer
+  createdAt: text("created_at").default("now"),
+  updatedAt: text("updated_at").default("now"),
 });
 
 export const userRelations = relations(users, ({ many }) => ({
@@ -52,12 +46,12 @@ export type UpsertUser = typeof users.$inferInsert;
 
 // Categories
 export const categories = pgTable("categories", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  slug: varchar("slug").notNull().unique(),
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
   description: text("description"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: text("created_at").default("now"),
+  updatedAt: text("updated_at").default("now"),
 });
 
 export const categoryRelations = relations(categories, ({ many }) => ({
@@ -70,19 +64,19 @@ export const insertCategorySchema = createInsertSchema(categories);
 
 // Articles
 export const articles = pgTable("articles", {
-  id: serial("id").primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  id: integer("id").primaryKey(),
+  title: text("title", { length: 255 }).notNull(),
+  slug: text("slug", { length: 255 }).notNull().unique(),
   excerpt: text("excerpt").notNull(),
   content: text("content").notNull(),
   image: text("image").notNull(),
-  authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
-  status: varchar("status", { length: 50 }).default("published").notNull(), // published, draft, archived
-  isBreaking: boolean("is_breaking").default(false),
+  status: text("status", { length: 50 }).default("published").notNull(), // published, draft, archived
+  isBreaking: integer("is_breaking").default(0),
   viewCount: integer("view_count").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: text("created_at").default("now"),
+  updatedAt: text("updated_at").default("now"),
 });
 
 export const articleRelations = relations(articles, ({ one, many }) => ({
@@ -128,16 +122,16 @@ export const insertArticleSchema = createInsertSchema(articles).omit({
 
 // Comments - Avoid circular reference issues by not defining the parent FK directly
 export const comments = pgTable("comments", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   content: text("content").notNull(),
   articleId: integer("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
-  authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   parentId: integer("parent_id"), // Will add FK constraint with SQL after table is created
-  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, approved, rejected, flagged
+  status: text("status", { length: 50 }).default("pending").notNull(), // pending, approved, rejected, flagged
   likes: integer("likes").default(0),
   dislikes: integer("dislikes").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: text("created_at").default("now"),
+  updatedAt: text("updated_at").default("now"),
 });
 
 // Add FK constraint in SQL after table is created
@@ -174,10 +168,10 @@ export const insertCommentSchema = createInsertSchema(comments).omit({
 
 // Article Tags
 export const tags = pgTable("tags", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull().unique(),
-  slug: varchar("slug", { length: 100 }).notNull().unique(),
-  createdAt: timestamp("created_at").defaultNow(),
+  id: integer("id").primaryKey(),
+  name: text("name", { length: 100 }).notNull().unique(),
+  slug: text("slug", { length: 100 }).notNull().unique(),
+  createdAt: text("created_at").default("now"),
 });
 
 export const tagRelations = relations(tags, ({ many }) => ({
@@ -185,7 +179,7 @@ export const tagRelations = relations(tags, ({ many }) => ({
 }));
 
 export const articleTags = pgTable("article_tags", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   articleId: integer("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
   tagId: integer("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
 }, (table) => {
@@ -207,10 +201,10 @@ export const articleTagsRelations = relations(articleTags, ({ one }) => ({
 
 // Article Likes
 export const articleLikes = pgTable("article_likes", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   articleId: integer("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").default("now"),
 }, (table) => {
   return {
     unq: index("article_likes_unique").on(table.articleId, table.userId),
@@ -230,10 +224,10 @@ export const articleLikesRelations = relations(articleLikes, ({ one }) => ({
 
 // Bookmarks
 export const bookmarks = pgTable("bookmarks", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   articleId: integer("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").default("now"),
 }, (table) => {
   return {
     unq: index("bookmarks_unique").on(table.articleId, table.userId),
@@ -253,10 +247,10 @@ export const bookmarkRelations = relations(bookmarks, ({ one }) => ({
 
 // Comment Likes and Dislikes
 export const commentLikes = pgTable("comment_likes", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").default("now"),
 }, (table) => {
   return {
     unq: index("comment_likes_unique").on(table.commentId, table.userId),
@@ -275,10 +269,10 @@ export const commentLikesRelations = relations(commentLikes, ({ one }) => ({
 }));
 
 export const commentDislikes = pgTable("comment_dislikes", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").default("now"),
 }, (table) => {
   return {
     unq: index("comment_dislikes_unique").on(table.commentId, table.userId),
@@ -298,11 +292,11 @@ export const commentDislikesRelations = relations(commentDislikes, ({ one }) => 
 
 // Comment Reports
 export const commentReports = pgTable("comment_reports", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   reason: text("reason"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").default("now"),
 }, (table) => {
   return {
     unq: index("comment_reports_unique").on(table.commentId, table.userId),
@@ -322,12 +316,12 @@ export const commentReportsRelations = relations(commentReports, ({ one }) => ({
 
 // Article Views
 export const articleViews = pgTable("article_views", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   articleId: integer("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
-  ipAddress: varchar("ip_address"),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").default("now"),
 });
 
 export const articleViewsRelations = relations(articleViews, ({ one }) => ({
@@ -343,11 +337,11 @@ export const articleViewsRelations = relations(articleViews, ({ one }) => ({
 
 // Settings
 export const settings = pgTable("settings", {
-  id: serial("id").primaryKey(),
-  section: varchar("section", { length: 50 }).notNull(), // general, users, advanced
-  key: varchar("key", { length: 100 }).notNull(),
-  value: jsonb("value"),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  id: integer("id").primaryKey(),
+  section: text("section", { length: 50 }).notNull(), // general, users, advanced
+  key: text("key", { length: 100 }).notNull(),
+  value: text("value"),
+  updatedAt: text("updated_at").default("now"),
 }, (table) => {
   return {
     unq: index("settings_unique").on(table.section, table.key),
@@ -356,12 +350,12 @@ export const settings = pgTable("settings", {
 
 // User Preferences
 export const userPreferences = pgTable("user_preferences", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  newsletter: boolean("newsletter").default(true),
-  commentReplies: boolean("comment_replies").default(true),
-  articleUpdates: boolean("article_updates").default(true),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  id: integer("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  newsletter: integer("newsletter").default(1),
+  commentReplies: integer("comment_replies").default(1),
+  articleUpdates: integer("article_updates").default(1),
+  updatedAt: text("updated_at").default("now"),
 });
 
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
