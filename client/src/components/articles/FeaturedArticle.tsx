@@ -97,11 +97,11 @@ export default function FeaturedArticle({
         <div className="md:w-2/3 relative flex items-stretch">
           <Link href={`/article/${id}`}>
             <a className="block w-full h-full">
-              <div className="aspect-w-16 aspect-h-6 w-full h-full">
+              <div className="w-full h-full">
                 <img 
                   src={image} 
                   alt={title} 
-                  className="w-full h-full object-cover rounded-md min-h-[220px] md:min-h-[384px] max-h-[450px]"
+                  className="w-full h-full object-cover rounded-md"
                 />
               </div>
             </a>
