@@ -100,7 +100,7 @@ export default function FeaturedArticle({
               <img 
                 src={image} 
                 alt={title} 
-                className="w-full h-64 md:h-full object-cover rounded-md"
+                className="w-full h-64 md:h-full object-cover"
               />
             </a>
           </Link>
