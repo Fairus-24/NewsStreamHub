@@ -94,8 +94,8 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  // Hapus/matikan loop domain jika REPLIT_DOMAINS tidak ada
-  if (process.env.REPLIT_DOMAINS) {
+  // Only create strategies if auth is enabled and we have domains
+  if (isReplitAuthEnabled && process.env.REPLIT_DOMAINS && config) {
     for (const domain of process.env.REPLIT_DOMAINS.split(",")) {
       const strategy = new Strategy(
         {
@@ -114,6 +114,9 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    if (!isReplitAuthEnabled || !config) {
+      return res.status(503).json({ message: "Authentication not configured" });
+    }
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -121,6 +124,9 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
+    if (!isReplitAuthEnabled || !config) {
+      return res.status(503).json({ message: "Authentication not configured" });
+    }
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
@@ -128,6 +134,9 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/logout", (req, res) => {
+    if (!isReplitAuthEnabled || !config) {
+      return res.status(503).json({ message: "Authentication not configured" });
+    }
     req.logout(() => {
       res.redirect(
         client.buildEndSessionUrl(config, {
@@ -140,6 +149,10 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (!isReplitAuthEnabled) {
+    return res.status(503).json({ message: "Authentication not configured" });
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
