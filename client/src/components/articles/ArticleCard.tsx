@@ -140,18 +140,18 @@ export default function ArticleCard({
         </>
       ) : (
         <div className="md:flex">
-          <div className="md:w-1/4 mb-4 md:mb-0 md:mr-6">
+          <div className="md:w-1/3 mb-4 md:mb-0 md:mr-6">
             <Link href={`/article/${id}`}>
               <a>
                 <img 
                   src={image} 
                   alt={title} 
-                  className="w-full h-40 object-cover rounded-md"
+                  className="w-full h-32 md:h-40 object-cover rounded-md"
                 />
               </a>
             </Link>
           </div>
-          <div className="md:w-3/4">
+          <div className="md:w-2/3">
             <div className="flex items-center mb-2">
               <Badge variant="category" className="text-xs font-semibold px-2 py-1 rounded-md">{category}</Badge>
               <span className="ml-2 text-xs text-secondary">{formatDate(date)}</span>
