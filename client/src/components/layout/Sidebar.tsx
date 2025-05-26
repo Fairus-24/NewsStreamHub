@@ -112,14 +112,14 @@ export default function Sidebar() {
       </div>
       
       {/* Newsletter */}
-      <div className="bg-primary bg-opacity-10 p-5 rounded-lg">
+      <div className="bg-white p-5 rounded-lg shadow-sm border border-border-gray">
         <h3 className="font-headline font-bold text-lg text-primary mb-2">Subscribe to Our Newsletter</h3>
         <p className="text-secondary mb-4">Get the latest news delivered directly to your inbox.</p>
         <form>
           <Input
             type="email"
             placeholder="Your email address"
-            className="w-full px-4 py-2 rounded-md border border-border-gray mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-4 py-2 rounded-md border border-border-gray mb-3 focus:outline-none focus:ring-2 focus:ring-primary bg-white text-text"
           />
           <Button type="submit" className="w-full">
             Subscribe Now
