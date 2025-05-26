@@ -28,9 +28,9 @@ const sampleArticles = [
     title: "Global Economy Faces Unprecedented Challenges Amid Shifting Geopolitical Landscape",
     excerpt: "World economic leaders gather to address growing concerns about inflation, supply chain issues, and trade tensions.",
     content: `<p>In a high-stakes summit that concluded yesterday, finance ministers from G20 nations acknowledged the complex challenges facing the global economy. The meeting, which took place against a backdrop of rising inflation and persistent supply chain disruptions, highlighted the need for coordinated action.</p>
-    
+
     <p>"We're navigating uncharted waters," said IMF Managing Director Kristalina Georgieva. "The combination of pandemic recovery, climate change adaptation, and geopolitical tensions has created a perfect storm for global markets."</p>
-    
+
     <p>Key points of discussion included:</p>
     <ul>
       <li>Strategies to combat inflation without triggering recession</li>
@@ -38,11 +38,11 @@ const sampleArticles = [
       <li>Managing sovereign debt among developing nations</li>
       <li>Addressing currency volatility</li>
     </ul>
-    
+
     <p>The summit concluded with a joint statement emphasizing commitment to maintaining open trade channels and providing support to vulnerable economies. However, analysts noted that concrete action plans remained vague, reflecting the difficult balancing act facing policymakers.</p>
-    
+
     <p>"The real challenge now is implementation," noted economist Carmen Reinhart. "Countries are naturally focused on domestic concerns, but the solutions must be global in nature."</p>
-    
+
     <p>Markets responded cautiously to the summit's conclusion, with modest gains across major indices as investors processed the implications of the discussions.</p>`,
     image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80", // economy/finance
     categoryName: "Business",
@@ -52,15 +52,15 @@ const sampleArticles = [
     title: "Breakthrough in Quantum Computing Promises to Revolutionize Data Processing",
     excerpt: "Scientists achieve stable quantum entanglement at room temperature, potentially making quantum computers more practical for everyday use.",
     content: `<p>A team of researchers at the Massachusetts Institute of Technology (MIT) has announced a significant breakthrough in quantum computing technology that could accelerate the development of practical quantum computers.</p>
-    
+
     <p>The research, published yesterday in the journal Nature Physics, demonstrates a method for maintaining quantum coherence—the delicate state necessary for quantum calculations—at room temperature for over 10 milliseconds. While that might seem brief, it represents a thousand-fold improvement over previous efforts and crosses a critical threshold for practical applications.</p>
-    
+
     <p>"This is the quantum equivalent of breaking the sound barrier," said Dr. Michelle Chen, the study's lead author. "We've long known that quantum computing could theoretically provide exponential speedups for certain types of problems, but environmental interference has been a major roadblock."</p>
-    
+
     <p>Traditional quantum systems require extreme cooling to near absolute zero temperatures (-273.15°C), making them expensive and impractical for widespread deployment. This new approach uses a novel material combining hexagonal boron nitride with diamond nitrogen-vacancy centers to create more robust qubits—the fundamental units of quantum information.</p>
-    
+
     <p>Industry experts suggest the implications could be profound. "If these results can be replicated and scaled, we might see quantum advantage for practical problems much sooner than anticipated," noted quantum computing specialist Dr. Robert Malik, who was not involved in the research.</p>
-    
+
     <p>Potential applications include:</p>
     <ul>
       <li>Accelerated drug discovery through improved molecular modeling</li>
@@ -68,7 +68,7 @@ const sampleArticles = [
       <li>Enhanced machine learning capabilities</li>
       <li>Better climate modeling</li>
     </ul>
-    
+
     <p>Tech giants including IBM, Google, and Microsoft have already expressed interest in incorporating the technique into their quantum research programs.</p>`,
     image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=1200&q=80", // quantum/technology
     categoryName: "Technology",
@@ -78,11 +78,11 @@ const sampleArticles = [
     title: "Climate Summit Yields Historic Agreement on Carbon Emissions Reduction",
     excerpt: "After marathon negotiations, 196 countries commit to accelerated timeline for cutting greenhouse gas emissions.",
     content: `<p>In what environmental advocates are calling a watershed moment for climate action, the United Nations Climate Change Conference (COP29) concluded today with a landmark agreement to significantly accelerate carbon emissions reduction timelines.</p>
-    
+
     <p>The accord, dubbed the "Geneva Protocol," commits 196 countries to reducing carbon emissions by 60% from 2010 levels by 2035—a substantially more ambitious target than previous international agreements.</p>
-    
+
     <p>"This represents a fundamental shift in global climate diplomacy," said UN Secretary-General António Guterres. "For the first time, we have an agreement that truly reflects the urgency of the climate crisis."</p>
-    
+
     <p>Key provisions of the agreement include:</p>
     <ul>
       <li>Binding emissions reduction targets for all signatories, including developing nations</li>
@@ -91,11 +91,11 @@ const sampleArticles = [
       <li>Accelerated phaseout of coal power generation</li>
       <li>Enhanced monitoring and verification protocols</li>
     </ul>
-    
+
     <p>The breakthrough came after three days of round-the-clock negotiations, during which several major economies significantly strengthened their commitments. China, the world's largest carbon emitter, agreed to peak its emissions by 2025—five years earlier than its previous target.</p>
-    
+
     <p>Climate scientists have cautiously welcomed the agreement. "If fully implemented, these measures would give us a fighting chance of limiting warming to 1.8°C above pre-industrial levels," said Dr. Katherine Johnson of the Climate Action Tracker. "That's still above the Paris Agreement's 1.5°C aspiration, but a major improvement over the 2.7°C trajectory we were on."</p>
-    
+
     <p>Implementation remains the critical challenge, with countries required to submit detailed action plans within 18 months.</p>`,
     image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80", // climate/environment
     categoryName: "Environment",
@@ -180,7 +180,7 @@ async function seedDatabase() {
       role: "admin",
       profileImageUrl: "https://ui-avatars.com/api/?name=Admin+User&background=1A237E&color=fff",
     }).onConflictDoNothing();
-    
+
     // 2. Create categories
     console.log("Creating categories...");
     for (const category of categoryData) {
@@ -190,7 +190,7 @@ async function seedDatabase() {
         description: category.description,
       }).onConflictDoNothing();
     }
-    
+
     // 3. Create tags
     console.log("Creating tags...");
     for (const tagName of tagData) {
@@ -199,19 +199,19 @@ async function seedDatabase() {
         slug: generateSlug(tagName),
       }).onConflictDoNothing();
     }
-    
+
     // 4. Get admin user, categories, and tags for article creation
     const adminUser = await db.select().from(users).where(eq(users.id, "admin")).limit(1);
     const createdCategories = await db.select().from(categories);
     const createdTags = await db.select().from(tags);
-    
+
     if (adminUser.length > 0 && createdCategories.length > 0) {
       // 5. Create articles
       console.log("Creating articles...");
-      
+
       for (const articleData of sampleArticles) {
         const category = createdCategories.find(c => c.name === articleData.categoryName);
-        
+
         if (category) {
           // Ensure all values are strings/numbers/null
           const insertData = {
@@ -253,7 +253,7 @@ async function seedDatabase() {
         }
       }
     }
-    
+
     console.log("✅ Database seeding completed successfully");
   } catch (error) {
     console.error("❌ Error seeding database:", error);
