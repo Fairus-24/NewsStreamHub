@@ -94,16 +94,14 @@ export default function FeaturedArticle({
   return (
     <section className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
       <div className="md:flex">
-        <div className="md:w-2/3 relative flex items-stretch">
+        <div className="md:w-2/3 relative">
           <Link href={`/article/${id}`}>
-            <a className="block w-full h-full">
-              <div className="w-full h-full">
-                <img 
-                  src={image} 
-                  alt={title} 
-                  className="w-full h-full object-cover rounded-md"
-                />
-              </div>
+            <a className="block w-full">
+              <img 
+                src={image} 
+                alt={title} 
+                className="w-full h-64 md:h-80 object-cover rounded-md"
+              />
             </a>
           </Link>
           {isBreaking && (
@@ -112,7 +110,7 @@ export default function FeaturedArticle({
             </div>
           )}
         </div>
-        <div className="md:w-1/3 p-6">
+        <div className="md:w-1/3 p-6 flex flex-col justify-between">
           <Link href={`/category/${category.toLowerCase()}`}>
             <a className="text-primary text-sm font-semibold tracking-wider uppercase">
               {category}
