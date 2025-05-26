@@ -93,76 +93,72 @@ export default function FeaturedArticle({
 
   return (
     <section className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-      <div className="p-6">
-        <div className="flex flex-col space-y-4">
-          <div className="flex flex-col md:flex-row md:space-x-6 space-y-4 md:space-y-0">
-            <div className="md:w-2/3">
-              <Link href={`/category/${category.toLowerCase()}`}>
-                <a className="text-primary text-sm font-semibold tracking-wider uppercase">
-                  {category}
-                </a>
-              </Link>
-              <Link href={`/article/${id}`}>
-                <a>
-                  <h2 className="font-headline text-2xl font-bold mt-2 mb-4 hover:text-primary transition-colors">
-                    {title}
-                  </h2>
-                </a>
-              </Link>
-              <p className="text-secondary mb-4 line-clamp-3">{excerpt}</p>
-              <div className="flex items-center text-sm text-secondary mb-4">
-                <Avatar className="w-8 h-8 mr-2">
-                  <AvatarImage src={author.avatar} alt={author.name} />
-                  <AvatarFallback>{author.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <span>By <span className="font-semibold">{author.name}</span></span>
-                <span className="mx-2">•</span>
-                <span>{formatDate(date)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className={`p-0 h-auto flex items-center text-secondary ${liked ? 'text-red-500' : 'hover:text-primary'}`}
-                    onClick={handleLike}
-                  >
-                    <Heart className={`w-4 h-4 mr-1 ${liked ? 'fill-current' : ''}`} />
-                    <span>{likeCount}</span>
-                  </Button>
-                  <Link href={`/article/${id}#comments`}>
-                    <a className="flex items-center text-secondary hover:text-primary">
-                      <MessageSquare className="w-4 h-4 mr-1" />
-                      <span>{comments}</span>
-                    </a>
-                  </Link>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={`p-0 h-auto text-secondary ${bookmarked ? 'text-primary' : 'hover:text-primary'}`}
-                  onClick={handleBookmark}
-                >
-                  <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
-                </Button>
-              </div>
+      <div className="md:flex">
+        <div className="md:w-2/3 relative">
+          <Link href={`/article/${id}`}>
+            <a className="block w-full">
+              <img 
+                src={image} 
+                alt={title} 
+                className="w-full h-64 md:h-full object-cover rounded-md"
+              />
+            </a>
+          </Link>
+          {isBreaking && (
+            <div className="absolute top-0 left-0 bg-accent text-white px-3 py-1 m-4 rounded-md text-sm font-ui font-semibold">
+              BREAKING
             </div>
-            <div className="md:w-1/3 relative">
-              <Link href={`/article/${id}`}>
-                <a className="block w-full">
-                  <img 
-                    src={image} 
-                    alt={title} 
-                    className="w-full h-48 object-cover rounded-md"
-                  />
+          )}
+        </div>
+        <div className="md:w-1/3 p-6 flex flex-col justify-between">
+          <Link href={`/category/${category.toLowerCase()}`}>
+            <a className="text-primary text-sm font-semibold tracking-wider uppercase">
+              {category}
+            </a>
+          </Link>
+          <Link href={`/article/${id}`}>
+            <a>
+              <h2 className="font-headline text-2xl font-bold mt-2 mb-4 hover:text-primary transition-colors">
+                {title}
+              </h2>
+            </a>
+          </Link>
+          <p className="text-secondary mb-4 line-clamp-3">{excerpt}</p>
+          <div className="flex items-center text-sm text-secondary mb-4">
+            <Avatar className="w-8 h-8 mr-2">
+              <AvatarImage src={author.avatar} alt={author.name} />
+              <AvatarFallback>{author.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <span>By <span className="font-semibold">{author.name}</span></span>
+            <span className="mx-2">•</span>
+            <span>{formatDate(date)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={`p-0 h-auto flex items-center text-secondary ${liked ? 'text-red-500' : 'hover:text-primary'}`}
+                onClick={handleLike}
+              >
+                <Heart className={`w-4 h-4 mr-1 ${liked ? 'fill-current' : ''}`} />
+                <span>{likeCount}</span>
+              </Button>
+              <Link href={`/article/${id}#comments`}>
+                <a className="flex items-center text-secondary hover:text-primary">
+                  <MessageSquare className="w-4 h-4 mr-1" />
+                  <span>{comments}</span>
                 </a>
               </Link>
-              {isBreaking && (
-                <div className="absolute top-0 left-0 bg-accent text-white px-3 py-1 m-2 rounded-md text-sm font-ui font-semibold">
-                  BREAKING
-                </div>
-              )}
             </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`p-0 h-auto text-secondary ${bookmarked ? 'text-primary' : 'hover:text-primary'}`}
+              onClick={handleBookmark}
+            >
+              <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
+            </Button>
           </div>
         </div>
       </div>
