@@ -146,7 +146,7 @@ export default function ArticleCard({
                 <img 
                   src={image} 
                   alt={title} 
-                  className="w-full h-32 md:h-40 object-cover rounded-md"
+                  className="w-full aspect-square object-cover rounded-md"
                 />
               </a>
             </Link>
