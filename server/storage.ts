@@ -20,7 +20,8 @@ import {
   settings,
   userPreferences,
   tags,
-  articleTags
+  articleTags,
+  userComments,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, isNull, like, or, sql, inArray, count, max, min, sum, gt, lt } from "drizzle-orm";
@@ -879,7 +880,7 @@ export class DatabaseStorage implements IStorage {
         status = 'approved';
       }
       
-      // Create comment
+      // Create comment in public table
       const [comment] = await db
         .insert(comments)
         .values({
@@ -887,7 +888,15 @@ export class DatabaseStorage implements IStorage {
           status,
         })
         .returning();
-      
+
+      // Simpan juga ke data user (userComments)
+      await db.insert(userComments).values({
+        userId: commentData.authorId,
+        commentId: comment.id,
+        articleId: commentData.articleId,
+        createdAt: comment.createdAt,
+      });
+
       return comment;
     } catch (error) {
       console.error("Error creating comment:", error);

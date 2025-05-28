@@ -364,3 +364,31 @@ export const userPreferencesRelations = relations(userPreferences, ({ one }) => 
     references: [users.id],
   }),
 }));
+
+// User Comments
+export const userComments = pgTable("user_comments", {
+  id: integer("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
+  articleId: integer("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").default("now"),
+}, (table) => {
+  return {
+    unq: index("user_comments_unique").on(table.userId, table.commentId),
+  };
+});
+
+export const userCommentsRelations = relations(userComments, ({ one }) => ({
+  user: one(users, {
+    fields: [userComments.userId],
+    references: [users.id],
+  }),
+  comment: one(comments, {
+    fields: [userComments.commentId],
+    references: [comments.id],
+  }),
+  article: one(articles, {
+    fields: [userComments.articleId],
+    references: [articles.id],
+  }),
+}));

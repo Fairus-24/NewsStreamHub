@@ -35,6 +35,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { updateUserProfile, updateUserPreferences } from '@/lib/firebaseUserActions';
+import { getUserStats } from '@/lib/firebaseUserStats';
 
 const profileFormSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters.'),
@@ -60,8 +61,10 @@ export default function ProfilePage() {
     enabled: !!user,
   });
   
-  const { data: userStats } = useQuery<any>({
-    queryKey: ['/api/user/stats'],
+  // Use Firestore-based userStats
+  const { data: userStats, isLoading: isLoadingStats } = useQuery<any>({
+    queryKey: ['userStats', user?.id],
+    queryFn: () => user ? getUserStats(user.id) : Promise.resolve(null),
     enabled: !!user,
   });
   
