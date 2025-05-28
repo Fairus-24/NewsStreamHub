@@ -1,148 +1,110 @@
+# 📰 NewsStreamHub
 
-<h1 align="center">📰 NewsStreamHub</h1>
-<p align="center">
-  Platform berita modern dengan React + Node.js
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/React-18.2.0-blue?style=flat-square&logo=react" />
-  <img src="https://img.shields.io/badge/Node.js-18.x-green?style=flat-square&logo=node.js" />
-  <img src="https://img.shields.io/badge/Express.js-4.x-lightgrey?style=flat-square&logo=express" />
-  <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" />
-</p>
+Platform berita modern real-time berbasis React, Node.js, Express, dan SQLite.
 
 ---
 
-## 🚀 Deskripsi Singkat
+## 🚀 Tentang Project
 
-**NewsStreamHub** adalah aplikasi web berita yang menampilkan berita dari berbagai sumber secara real-time. Proyek ini dibangun dengan **React** di sisi frontend dan **Node.js/Express** sebagai backend server API.
+**NewsStreamHub** adalah aplikasi web berita yang menampilkan artikel dari berbagai kategori secara real-time. Dibangun dengan:
+- **Frontend:** React 18 + Vite + Tailwind CSS
+- **Backend:** Node.js, Express.js
+- **Database:** SQLite (dengan Drizzle ORM)
+- **ORM:** Drizzle ORM
+- **UI/UX:** Modern, responsif, dan animatif
 
 ---
 
-## 📂 Struktur Proyek
+## 📁 Struktur Proyek
 
 ```
-
 NewsStreamHub/
-├── client/       # Frontend React
+├── client/         # Frontend React
 │   ├── public/
 │   └── src/
-├── server/       # Backend Node.js/Express
-│   └── routes/
-│   └── app.js
+│       ├── components/
+│       ├── hooks/
+│       ├── lib/
+│       ├── pages/
+│       └── types/
+├── server/         # Backend Express.js
+│   ├── db.ts
+│   ├── routes.ts
+│   ├── seed-db.ts
+│   └── ...
+├── shared/         # Schema & shared types
+├── assets/         # Gambar demo, video, dsb
+├── drizzle.config.ts/json
 ├── README.md
-└── package.json  # Root (optional - untuk dev tools)
-
-````
+└── package.json
+```
 
 ---
 
-## ⚙️ Instalasi & Menjalankan Proyek
+## ⚙️ Cara Menjalankan Aplikasi
 
-### 1. Clone Repository
-```bash
-git clone https://github.com/Fairus-24/NewsStreamHub.git
-cd NewsStreamHub
-````
+1. **Clone repository**
+   ```bash
+   git clone https://github.com/Fairus-24/NewsStreamHub.git
+   cd NewsStreamHub
+   ```
 
-### 2. Install Dependensi
+2. **Install semua dependensi**
+   ```bash
+   npm install
+   npm run db:push
+   npm run seed
+   npm run dev
+   ```
+   > Semua perintah di atas dijalankan dari root folder (bukan di client/server terpisah).
 
-#### 🔹Fullstack
-```bash
-npm install
-npm run db:push
-npm run seed
-npm run dev
-```
-
-#### 🔹 Backend (Ekspress.js)
-
-```bash
-cd server
-npm install
-```
-
-#### 🔹 Frontend (React)
-
-```bash
-cd ../client
-npm install
-```
-
-### 3. Jalankan Aplikasi
-
-#### 🔹 Jalankan Backend
-
-```bash
-cd ../server
-npm run dev
-```
-
-*Server berjalan di: `http://localhost:5000`*
-
-#### 🔹 Jalankan Frontend
-
-```bash
-cd ../client
-npm start
-```
-
-*Frontend React di: `http://localhost:3000`*
+3. **Akses aplikasi**
+   - Frontend: [http://localhost:3000](http://localhost:3000)
+   - Backend API: [http://localhost:5000](http://localhost:5000)
 
 ---
 
-## 🔄 API Proxy (Agar React bisa akses backend)
+## 🔄 Proxy API (Agar React bisa akses backend)
 
-Di `client/package.json`, pastikan ada baris berikut:
-
+Pastikan di `client/package.json` ada:
 ```json
 "proxy": "http://localhost:5000"
 ```
 
 ---
 
-## 🧪 Contoh API
+## 🧪 Contoh Endpoint API
 
-`GET /api/news`
-→ Mengembalikan daftar berita terbaru dari backend
-
----
-
-## 📸 Tampilan (Screenshot)
-
-## **HomePage** <br>
-<figure style="margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2); display: inline-block;">
-  <img src="./assets/homepage.png" alt="Tampilan Homepage" width="600"/>
-</figure>
-
-## **News-Detail** <br>
-<figure style="margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2); display: inline-block;">
-  <img src="./assets/news-detail.png" alt="Detail Berita" width="600"/>
-</figure>
+- `GET /api/articles` — Daftar artikel
+- `GET /api/articles/:id` — Detail artikel
+- `POST /api/articles/:id/like` — Like/unlike artikel
+- `POST /api/articles/:id/bookmark` — Bookmark/unbookmark artikel
+- ...dan endpoint lain sesuai kebutuhan
 
 ---
 
-## 📸 Dokumentasi Video
+## 📸 Demo & Tampilan
 
-🎬 **Video Dokumentasi:**
-<video width="600" controls>
-  <source src="./assets/demo.mp4" type="video/mp4">
-  Your browser does not support the video tag. <br>
-  Go to ===> (https://drive.google.com/file/d/1ogk7dbrKd7RasTKFXsVER20lBFUGblnL/view?usp=sharing)
-</video>
+**Homepage**
+![Homepage](./assets/homepage.png)
+
+**Detail Berita**
+![Detail Berita](./assets/news-detail.png)
+
+**Video Demo**
+[Demo Video (Google Drive)](https://drive.google.com/file/d/1ogk7dbrKd7RasTKFXsVER20lBFUGblnL/view?usp=sharing)
 
 ---
 
 ## 🙌 Kontribusi
 
-Kontribusi terbuka! Silakan buat pull request atau buka issue.
+Kontribusi terbuka! Silakan fork, buat branch, dan pull request.
 
 ---
 
 ## 📄 Lisensi
 
-Distributed under the MIT License.
-Lihat `LICENSE` untuk info lebih lanjut.
+MIT License. Lihat file `LICENSE` untuk detail.
 
 ---
 
@@ -152,8 +114,6 @@ Fairus – [GitHub @Fairus-24](https://github.com/Fairus-24)
 
 ---
 
-## 🔧 Catatan:
-- Jika kamu menggunakan port, endpoint, atau struktur folder yang berbeda, saya bisa bantu ubah agar sesuai.
-- Untuk membuat tampilannya lebih hidup, kamu bisa menambahkan **GIF demo**, **badge CI/CD**, atau **deploy link** (jika di-hosting).
-
-```
+## 🔧 Catatan
+- Jika ada perubahan port, endpoint, atau struktur folder, sesuaikan instruksi di atas.
+- Untuk tampilan lebih hidup, bisa tambahkan GIF demo, badge CI/CD, atau link deploy jika sudah di-hosting.
