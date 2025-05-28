@@ -59,9 +59,9 @@ export default function Sidebar() {
             type="submit" 
             variant="ghost" 
             size="icon" 
-            className="absolute right-2 top-1/2 transform -translate-y-1/2"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 hover:bg-primary/10 hover:scale-105 transition-all duration-200 rounded-full group"
           >
-            <Search className="h-4 w-4 text-secondary hover:text-primary" />
+            <Search className="h-4 w-4 text-secondary group-hover:text-primary transition-colors duration-200" />
           </Button>
         </form>
       </div>
@@ -74,7 +74,7 @@ export default function Sidebar() {
             <Link 
               key={index} 
               href={`/search?q=${encodeURIComponent(topic.replace('#', ''))}`}
-              className="px-3 py-1 bg-light-gray rounded-full text-secondary text-sm hover:bg-primary hover:text-white transition-colors duration-300"
+              className="px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-50 rounded-full text-secondary text-sm font-medium hover:from-primary hover:to-primary/90 hover:text-white hover:shadow-lg hover:scale-105 transition-all duration-300 ease-in-out border border-transparent hover:border-primary/20"
             >
               {topic}
             </Link>
@@ -121,7 +121,10 @@ export default function Sidebar() {
             placeholder="Your email address"
             className="w-full px-4 py-2 rounded-md border border-border-gray mb-3 focus:outline-none focus:ring-2 focus:ring-primary bg-white text-text"
           />
-          <Button type="submit" className="w-full">
+          <Button 
+            type="submit" 
+            className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ease-in-out font-semibold"
+          >
             Subscribe Now
           </Button>
         </form>

@@ -156,12 +156,12 @@ export default function FeaturedArticle({
               </Button>
               
               <Link href={`/article/${id}#comments`}>
-                <a className="group p-2 flex items-center rounded-full transition-all duration-300 ease-in-out text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:scale-110">
+                <span className="group p-2 flex items-center rounded-full transition-all duration-300 ease-in-out text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:scale-110 cursor-pointer">
                   <MessageSquare className="w-5 h-5 mr-2 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12" />
                   <span className="font-medium text-sm transition-all duration-200 group-hover:font-semibold">
                     {comments}
                   </span>
-                </a>
+                </span>
               </Link>
             </div>
             
