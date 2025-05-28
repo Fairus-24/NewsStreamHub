@@ -55,11 +55,11 @@ export default function CategoryPage() {
                   id={article.id}
                   title={article.title}
                   excerpt={article.excerpt}
-                  category={article.category.name}
+                  category={article.category?.name || 'Uncategorized'}
                   date={article.createdAt}
                   image={article.image}
                   likes={article.likes}
-                  comments={article.comments.length}
+                  comments={article.comments?.length || 0}
                   isBookmarked={article.isBookmarked}
                   isLiked={article.isLiked}
                   variant="full"

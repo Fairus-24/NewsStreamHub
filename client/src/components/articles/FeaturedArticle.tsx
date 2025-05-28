@@ -111,9 +111,9 @@ export default function FeaturedArticle({
           )}
         </div>
         <div className="md:w-1/3 p-6 flex flex-col justify-between">
-          <Link href={`/category/${category.toLowerCase()}`}>
+          <Link href={`/category/${(category || 'uncategorized').toLowerCase()}`}>
             <a className="text-primary text-sm font-semibold tracking-wider uppercase">
-              {category}
+              {category || 'Uncategorized'}
             </a>
           </Link>
           <Link href={`/article/${id}`}>

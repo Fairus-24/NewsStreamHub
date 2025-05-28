@@ -11,19 +11,19 @@ export default function BookmarksPage() {
   const { user, isLoading: isLoadingAuth } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredBookmarks, setFilteredBookmarks] = useState<any[]>([]);
-  
+
   // Redirect if not logged in
   useEffect(() => {
     if (!isLoadingAuth && !user) {
       window.location.href = '/api/login';
     }
   }, [user, isLoadingAuth]);
-  
+
   const { data: bookmarks, isLoading } = useQuery({
     queryKey: ['/api/user/bookmarks'],
     enabled: !!user,
   });
-  
+
   // Filter bookmarks when search query changes
   useEffect(() => {
     if (bookmarks) {
@@ -41,12 +41,12 @@ export default function BookmarksPage() {
       }
     }
   }, [searchQuery, bookmarks]);
-  
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Search is already handled by the useEffect above
   };
-  
+
   if (isLoadingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -54,16 +54,16 @@ export default function BookmarksPage() {
       </div>
     );
   }
-  
+
   if (!user) {
     return null; // Will redirect in useEffect
   }
-  
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="max-w-5xl mx-auto">
         <h1 className="font-headline text-3xl font-bold mb-6">Your Bookmarks</h1>
-        
+
         <form onSubmit={handleSearch} className="mb-8">
           <div className="flex gap-2">
             <Input
@@ -79,7 +79,7 @@ export default function BookmarksPage() {
             </Button>
           </div>
         </form>
-        
+
         {isLoading ? (
           <div className="space-y-6">
             {Array(3).fill(0).map((_, index) => (
@@ -100,19 +100,19 @@ export default function BookmarksPage() {
           </div>
         ) : filteredBookmarks && filteredBookmarks.length > 0 ? (
           <div className="space-y-6">
-            {filteredBookmarks.map((article: any) => (
+            {filteredBookmarks.map((bookmark: any) => (
               <ArticleCard
-                key={article.id}
-                id={article.id}
-                title={article.title}
-                excerpt={article.excerpt}
-                category={article.category.name}
-                date={article.createdAt}
-                image={article.image}
-                likes={article.likes}
-                comments={article.comments.length}
+                key={bookmark.id}
+                id={bookmark.id}
+                title={bookmark.title}
+                excerpt={bookmark.excerpt}
+                category={bookmark.category?.name || 'Uncategorized'}
+                date={bookmark.createdAt}
+                image={bookmark.image}
+                likes={bookmark.likes}
+                comments={bookmark.comments.length}
                 isBookmarked={true}
-                isLiked={article.isLiked}
+                isLiked={bookmark.isLiked}
                 variant="full"
               />
             ))}

@@ -51,12 +51,12 @@ export default function Home() {
           id={featuredArticle.id}
           title={featuredArticle.title}
           excerpt={featuredArticle.excerpt}
-          category={featuredArticle.category.name}
+          category={featuredArticle.category?.name || 'Uncategorized'}
           date={featuredArticle.createdAt}
           image={featuredArticle.image}
           author={featuredArticle.author}
           likes={featuredArticle.likes}
-          comments={featuredArticle.comments.length}
+          comments={featuredArticle.comments?.length || 0}
           isBreaking={featuredArticle.isBreaking}
           isBookmarked={featuredArticle.isBookmarked}
           isLiked={featuredArticle.isLiked}
@@ -98,11 +98,11 @@ export default function Home() {
                   id={article.id}
                   title={article.title}
                   excerpt={article.excerpt}
-                  category={article.category.name}
+                  category={article.category?.name || 'Uncategorized'}
                   date={article.createdAt}
                   image={article.image}
                   likes={article.likes}
-                  comments={article.comments.length}
+                  comments={article.comments?.length || 0}
                   isBookmarked={article.isBookmarked}
                   isLiked={article.isLiked}
                 />
@@ -151,11 +151,11 @@ export default function Home() {
                   id={article.id}
                   title={article.title}
                   excerpt={article.excerpt}
-                  category={article.category.name}
+                  category={article.category?.name || 'Uncategorized'}
                   date={article.createdAt}
                   image={article.image}
                   likes={article.likes}
-                  comments={article.comments.length}
+                  comments={article.comments?.length || 0}
                   isBookmarked={article.isBookmarked}
                   isLiked={article.isLiked}
                   variant="full"
