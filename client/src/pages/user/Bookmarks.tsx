@@ -1,28 +1,59 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import ArticleCard from '@/components/articles/ArticleCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import { useEffect } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function BookmarksPage() {
   const { user, isLoading: isLoadingAuth } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredBookmarks, setFilteredBookmarks] = useState<any[]>([]);
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Redirect if not logged in
   useEffect(() => {
     if (!isLoadingAuth && !user) {
-      window.location.href = '/api/login';
+      window.location.href = '/login';
     }
   }, [user, isLoadingAuth]);
 
-  const { data: bookmarks, isLoading } = useQuery({
-    queryKey: ['/api/user/bookmarks'],
-    enabled: !!user,
-  });
+  // Fetch bookmarks from Firestore
+  useEffect(() => {
+    async function fetchBookmarks() {
+      if (!user) return;
+      setIsLoading(true);
+      // Fetch articles where articleId in user.bookmarks
+      const userDoc = await (await import('firebase/firestore')).getDoc((await import('firebase/firestore')).doc(db, 'users', user.id));
+      const userData = userDoc.exists() ? userDoc.data() : {};
+      let bookmarkIds = userData.bookmarks || [];
+      // Pastikan semua ID string
+      bookmarkIds = bookmarkIds.map((id: any) => String(id));
+      if (bookmarkIds.length === 0) {
+        setBookmarks([]);
+        setFilteredBookmarks([]);
+        setIsLoading(false);
+        return;
+      }
+      // Firestore hanya mengizinkan max 10 ID per query
+      let articles: any[] = [];
+      for (let i = 0; i < bookmarkIds.length; i += 10) {
+        const batchIds = bookmarkIds.slice(i, i + 10);
+        const articlesRef = collection(db, 'articles');
+        const q = query(articlesRef, where('__name__', 'in', batchIds));
+        const snapshot = await getDocs(q);
+        articles = articles.concat(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }
+      setBookmarks(articles);
+      setFilteredBookmarks(articles);
+      setIsLoading(false);
+    }
+    fetchBookmarks();
+  }, [user]);
 
   // Filter bookmarks when search query changes
   useEffect(() => {
@@ -33,9 +64,9 @@ export default function BookmarksPage() {
         const lowercaseQuery = searchQuery.toLowerCase();
         setFilteredBookmarks(
           bookmarks.filter((bookmark: any) => 
-            bookmark.title.toLowerCase().includes(lowercaseQuery) ||
-            bookmark.excerpt.toLowerCase().includes(lowercaseQuery) ||
-            bookmark.category.name.toLowerCase().includes(lowercaseQuery)
+            bookmark.title?.toLowerCase().includes(lowercaseQuery) ||
+            bookmark.excerpt?.toLowerCase().includes(lowercaseQuery) ||
+            bookmark.category?.name?.toLowerCase().includes(lowercaseQuery)
           )
         );
       }

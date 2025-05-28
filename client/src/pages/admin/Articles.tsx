@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from '@/hooks/useAuth';
-import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
 export default function ArticlesPage() {
@@ -64,7 +63,7 @@ export default function ArticlesPage() {
     return null; // Will redirect in useEffect
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<any>({
     queryKey: ['/api/admin/articles', page, search, category],
   });
 
@@ -72,7 +71,7 @@ export default function ArticlesPage() {
     queryKey: ['/api/categories'],
   });
 
-  const articles = data?.articles || [];
+  const articles = Array.isArray(data?.articles) ? data.articles : [];
   const totalPages = data?.totalPages || 1;
 
   const handleDelete = async (id: string) => {
@@ -143,7 +142,7 @@ export default function ArticlesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories?.map((cat: any) => (
+                {(Array.isArray(categories) ? categories : []).map((cat: any) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
                   </SelectItem>

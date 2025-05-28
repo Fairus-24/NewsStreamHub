@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { apiRequest } from '@/lib/queryClient';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -35,6 +34,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { updateUserProfile, updateUserPreferences } from '@/lib/firebaseUserActions';
 
 const profileFormSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters.'),
@@ -55,12 +55,12 @@ export default function ProfilePage() {
     }
   }, [user, isLoadingAuth]);
   
-  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+  const { data: profile, isLoading: isLoadingProfile } = useQuery<any>({
     queryKey: ['/api/user/profile'],
     enabled: !!user,
   });
   
-  const { data: userStats } = useQuery({
+  const { data: userStats } = useQuery<any>({
     queryKey: ['/api/user/stats'],
     enabled: !!user,
   });
@@ -78,18 +78,17 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile) {
       form.reset({
-        username: profile.username || '',
-        bio: profile.bio || '',
-        profileImageUrl: profile.profileImageUrl || '',
+        username: profile?.username || '',
+        bio: profile?.bio || '',
+        profileImageUrl: profile?.profileImageUrl || '',
       });
     }
   }, [profile, form]);
   
   const onSubmit = async (data: z.infer<typeof profileFormSchema>) => {
+    if (!user) return;
     try {
-      await apiRequest('PATCH', '/api/user/profile', data);
-      queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      await updateUserProfile(user.id, data);
       toast({
         title: 'Profile updated',
         description: 'Your profile has been updated successfully',
@@ -279,7 +278,7 @@ export default function ProfilePage() {
                   <h3 className="font-medium text-lg mb-4">Recent Comments</h3>
                   {userStats?.recentComments?.length > 0 ? (
                     <div className="space-y-4">
-                      {userStats.recentComments.map((comment: any) => (
+                      {userStats?.recentComments.map((comment: any) => (
                         <div key={comment.id} className="bg-gray-50 p-3 rounded-md">
                           <div className="flex justify-between items-start">
                             <a href={`/article/${comment.articleId}`} className="font-medium hover:text-primary">
@@ -345,26 +344,24 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 
-                <Button className="mt-6" onClick={() => {
-                  apiRequest('POST', '/api/user/preferences', {
-                    newsletter: document.querySelector('input[type="checkbox"]')?.checked,
-                    commentReplies: document.querySelectorAll('input[type="checkbox"]')[1]?.checked,
-                    articleUpdates: document.querySelectorAll('input[type="checkbox"]')[2]?.checked,
-                  })
-                    .then(() => {
-                      queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
-                      toast({
-                        title: 'Preferences updated',
-                        description: 'Your email preferences have been updated',
-                      });
-                    })
-                    .catch(() => {
-                      toast({
-                        title: 'Error',
-                        description: 'Failed to update preferences',
-                        variant: 'destructive',
-                      });
+                <Button className="mt-6" onClick={async () => {
+                  try {
+                    await updateUserPreferences(user.id, {
+                      newsletter: (document.querySelectorAll('input[type="checkbox"]')[0] as HTMLInputElement)?.checked,
+                      commentReplies: (document.querySelectorAll('input[type="checkbox"]')[1] as HTMLInputElement)?.checked,
+                      articleUpdates: (document.querySelectorAll('input[type="checkbox"]')[2] as HTMLInputElement)?.checked,
                     });
+                    toast({
+                      title: 'Preferences updated',
+                      description: 'Your email preferences have been updated',
+                    });
+                  } catch {
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to update preferences',
+                      variant: 'destructive',
+                    });
+                  }
                 }}>
                   Save Preferences
                 </Button>

@@ -9,20 +9,20 @@ export default function Home() {
   const [trendingPage, setTrendingPage] = useState(1);
   const [latestPage, setLatestPage] = useState(1);
   
-  const { data: featuredArticle, isLoading: isLoadingFeatured } = useQuery({
+  const { data: featured, isLoading: isLoadingFeatured } = useQuery<any>({
     queryKey: ['/api/articles/featured'],
   });
   
-  const { data: trendingArticles, isLoading: isLoadingTrending } = useQuery({
-    queryKey: ['/api/articles/trending', trendingPage],
+  const { data: trending, isLoading: isLoadingTrending } = useQuery<any>({
+    queryKey: ['/api/articles/trending'],
   });
   
-  const { data: latestArticles, isLoading: isLoadingLatest } = useQuery({
-    queryKey: ['/api/articles/latest', latestPage],
+  const { data: latest, isLoading: isLoadingLatest } = useQuery<any>({
+    queryKey: ['/api/articles/latest'],
   });
   
-  const hasMoreTrending = trendingArticles?.hasMore || false;
-  const hasMoreLatest = latestArticles?.hasMore || false;
+  const hasMoreTrending = trending?.hasMore || false;
+  const hasMoreLatest = latest?.hasMore || false;
   
   return (
     <div className="container mx-auto px-4 py-6">
@@ -46,20 +46,20 @@ export default function Home() {
             </div>
           </div>
         </div>
-      ) : featuredArticle ? (
+      ) : featured ? (
         <FeaturedArticle
-          id={featuredArticle.id}
-          title={featuredArticle.title}
-          excerpt={featuredArticle.excerpt}
-          category={featuredArticle.category?.name || 'Uncategorized'}
-          date={featuredArticle.createdAt}
-          image={featuredArticle.image}
-          author={featuredArticle.author}
-          likes={featuredArticle.likes}
-          comments={featuredArticle.comments?.length || 0}
-          isBreaking={featuredArticle.isBreaking}
-          isBookmarked={featuredArticle.isBookmarked}
-          isLiked={featuredArticle.isLiked}
+          id={featured.id}
+          title={featured.title}
+          excerpt={featured.excerpt}
+          category={featured.category?.name || 'Uncategorized'}
+          date={featured.createdAt}
+          image={featured.image}
+          author={featured.author}
+          likes={featured.likes}
+          comments={featured.comments?.length || 0}
+          isBreaking={featured.isBreaking}
+          isBookmarked={featured.isBookmarked}
+          isLiked={featured.isLiked}
         />
       ) : null}
 
@@ -92,7 +92,7 @@ export default function Home() {
                     </div>
                   </div>
                 ))
-              ) : trendingArticles?.articles.map((article: any) => (
+              ) : (trending?.articles || []).map((article: any) => (
                 <ArticleCard
                   key={article.id}
                   id={article.id}
@@ -145,7 +145,7 @@ export default function Home() {
                     </div>
                   </div>
                 ))
-              ) : latestArticles?.articles.map((article: any) => (
+              ) : (latest?.articles || []).map((article: any) => (
                 <ArticleCard
                   key={article.id}
                   id={article.id}

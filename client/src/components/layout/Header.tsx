@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Menu, ChevronDown, Newspaper, Crown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const categories = [
   { slug: '', name: 'Home' },
@@ -40,6 +42,15 @@ export default function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
+  };
+
+  const handleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  };
+
+  const handleSignOut = async () => {
+    await signOut(auth);
   };
 
   return (
@@ -117,16 +128,14 @@ export default function Header() {
                   )}
                   
                   <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-2" />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" className="flex items-center px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200">
-                      Sign Out
-                    </a>
+                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer">
+                    Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button asChild variant="default" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white px-6 py-2 rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg">
-                <a href="/api/login">Sign In</a>
+              <Button onClick={handleSignIn} variant="default" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white px-6 py-2 rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg">
+                Sign In with Google
               </Button>
             )}
           </div>
@@ -211,21 +220,19 @@ export default function Header() {
                   <Link href="/bookmarks" className="block p-3 rounded-xl hover:bg-primary/10 text-sm font-ui transition-all duration-300 hover:translate-x-2">
                     Bookmarks
                   </Link>
-                  
                   {isAdmin && (
                     <Link href="/admin" className="block p-3 rounded-xl bg-gradient-to-r from-accent/10 to-accent/20 text-accent text-sm font-ui font-semibold transition-all duration-300 hover:translate-x-2">
                       Admin Dashboard
                     </Link>
                   )}
-                  
-                  <a href="/api/logout" className="block p-3 rounded-xl hover:bg-red-50 text-red-600 text-sm font-ui transition-all duration-300 hover:translate-x-2">
+                  <button onClick={handleSignOut} className="block p-3 rounded-xl hover:bg-red-50 text-red-600 text-sm font-ui transition-all duration-300 hover:translate-x-2 w-full text-left">
                     Sign Out
-                  </a>
+                  </button>
                 </div>
               </>
             ) : (
-              <Button asChild className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white py-3 rounded-xl font-semibold transition-all duration-300">
-                <a href="/api/login">Sign In</a>
+              <Button onClick={handleSignIn} className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white py-3 rounded-xl font-semibold transition-all duration-300">
+                Sign In with Google
               </Button>
             )}
           </div>

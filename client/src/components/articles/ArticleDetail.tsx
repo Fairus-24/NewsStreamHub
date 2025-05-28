@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { apiRequest } from '@/lib/queryClient';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, getReadingTime } from '@/lib/utils';
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react';
 import CommentList from '@/components/comments/CommentList';
 import CommentForm from '@/components/comments/CommentForm';
+import { toggleArticleLike, toggleArticleBookmark } from '@/lib/firebaseArticleActions';
 
 interface ArticleDetailProps {
   id: string;
@@ -57,7 +57,7 @@ interface UserInteractions {
 }
 
 export default function ArticleDetail({ id }: ArticleDetailProps) {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
@@ -78,23 +78,14 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
     }
   }, [userInteractions]);
 
-  useEffect(() => {
-    // Record view when component mounts
-    if (id) {
-      apiRequest('POST', `/api/articles/${id}/view`, {}).catch(console.error);
-    }
-  }, [id]);
-
   const handleLike = async () => {
-    if (!isAuthenticated) {
-      window.location.href = '/api/login';
+    if (!isAuthenticated || !user) {
+      window.location.href = '/login';
       return;
     }
-
     try {
-      await apiRequest('POST', `/api/articles/${id}/like`, { liked: !liked });
+      await toggleArticleLike(id, user.id, !liked);
       setLiked(!liked);
-      queryClient.invalidateQueries({ queryKey: [`/api/articles/${id}`] });
     } catch (error) {
       toast({
         title: "Error",
@@ -105,15 +96,13 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
   };
 
   const handleBookmark = async () => {
-    if (!isAuthenticated) {
-      window.location.href = '/api/login';
+    if (!isAuthenticated || !user) {
+      window.location.href = '/login';
       return;
     }
-
     try {
-      await apiRequest('POST', `/api/articles/${id}/bookmark`, { bookmarked: !bookmarked });
+      await toggleArticleBookmark(id, user.id, !bookmarked);
       setBookmarked(!bookmarked);
-      queryClient.invalidateQueries({ queryKey: ['/api/user/bookmarks'] });
       toast({
         title: bookmarked ? "Removed from bookmarks" : "Added to bookmarks",
         description: bookmarked ? "Article removed from your bookmarks" : "Article saved to your bookmarks",

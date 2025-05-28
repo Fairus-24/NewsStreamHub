@@ -3,8 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
-import { apiRequest } from '@/lib/queryClient';
-import { queryClient } from '@/lib/queryClient';
+import { addComment } from '@/lib/firebaseCommentActions';
 import { useToast } from '@/hooks/use-toast';
 
 interface CommentFormProps {
@@ -27,12 +26,10 @@ export default function CommentForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!isAuthenticated) {
-      window.location.href = '/api/login';
+    if (!isAuthenticated || !user) {
+      window.location.href = '/login';
       return;
     }
-    
     if (!content.trim()) {
       toast({
         title: "Comment cannot be empty",
@@ -40,23 +37,19 @@ export default function CommentForm({
       });
       return;
     }
-    
     setIsSubmitting(true);
-    
     try {
-      await apiRequest('POST', `/api/articles/${articleId}/comments`, {
+      await addComment({
+        articleId,
+        user,
         content,
-        parentId: parentId || null
+        parentId
       });
-      
-      setContent('');
-      queryClient.invalidateQueries({ queryKey: [`/api/articles/${articleId}`] });
-      
+      setContent("");
       toast({
         title: "Comment posted",
         description: "Your comment has been posted successfully",
       });
-      
       if (onCancel) {
         onCancel();
       }

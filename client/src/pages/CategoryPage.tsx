@@ -10,18 +10,21 @@ export default function CategoryPage() {
   const [, setLocation] = useLocation();
   const [page, setPage] = useState(1);
   
-  const { data, isLoading, isError } = useQuery({
-    queryKey: [`/api/categories/${slug}/articles`, page],
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ['/api/category/' + slug],
+    enabled: !!slug,
   });
   
-  if (isError) {
+  const category = data?.category;
+  const articles = data?.articles || [];
+  const hasMore = data?.hasMore || false;
+  
+  if (!category && !isLoading) {
     setLocation('/');
     return null;
   }
   
-  const categoryName = data?.category?.name || slug?.charAt(0).toUpperCase() + slug?.slice(1);
-  const articles = data?.articles || [];
-  const hasMore = data?.hasMore || false;
+  const categoryName = category?.name || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : "");
   
   return (
     <div className="container mx-auto px-4 py-6">

@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Heart, MessageSquare, Bookmark } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { apiRequest } from '@/lib/queryClient';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { queryClient } from '@/lib/queryClient';
+import { toggleArticleLike, toggleArticleBookmark } from '@/lib/firebaseArticleActions';
 
 interface ArticleCardProps {
   id: string;
@@ -36,23 +35,21 @@ export default function ArticleCard({
   isLiked = false,
   variant = 'compact'
 }: ArticleCardProps) {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [liked, setLiked] = useState(isLiked);
   const [likeCount, setLikeCount] = useState(likes);
   const [bookmarked, setBookmarked] = useState(isBookmarked);
   const { toast } = useToast();
 
   const handleLike = async () => {
-    if (!isAuthenticated) {
-      window.location.href = '/api/login';
+    if (!isAuthenticated || !user) {
+      window.location.href = '/login';
       return;
     }
-
     try {
-      await apiRequest('POST', `/api/articles/${id}/like`, { liked: !liked });
+      await toggleArticleLike(id, user.id, !liked);
       setLiked(!liked);
       setLikeCount(prev => liked ? prev - 1 : prev + 1);
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
     } catch (error) {
       toast({
         title: "Error",
@@ -63,15 +60,13 @@ export default function ArticleCard({
   };
 
   const handleBookmark = async () => {
-    if (!isAuthenticated) {
-      window.location.href = '/api/login';
+    if (!isAuthenticated || !user) {
+      window.location.href = '/login';
       return;
     }
-
     try {
-      await apiRequest('POST', `/api/articles/${id}/bookmark`, { bookmarked: !bookmarked });
+      await toggleArticleBookmark(id, user.id, !bookmarked);
       setBookmarked(!bookmarked);
-      queryClient.invalidateQueries({ queryKey: ['/api/user/bookmarks'] });
       toast({
         title: bookmarked ? "Removed from bookmarks" : "Added to bookmarks",
         description: bookmarked ? "Article removed from your bookmarks" : "Article saved to your bookmarks",

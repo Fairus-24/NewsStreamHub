@@ -3,7 +3,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { apiRequest } from '@/lib/queryClient';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import CommentForm from './CommentForm';
@@ -12,10 +11,7 @@ import {
   ThumbsUp, 
   ThumbsDown, 
   MessageSquare, 
-  MoreVertical,
-  Flag,
-  Trash2,
-  Edit
+  MoreVertical
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -24,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { toggleCommentLike, toggleCommentDislike } from '@/lib/firebaseCommentLikeActions';
 
 interface Comment {
   id: string;
@@ -63,14 +60,12 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
   const isAuthor = comment.isAuthor || user?.id === comment.author.id;
   
   const handleLike = async () => {
-    if (!isAuthenticated) {
-      window.location.href = '/api/login';
+    if (!isAuthenticated || !user) {
+      window.location.href = '/login';
       return;
     }
-    
     try {
-      await apiRequest('POST', `/api/comments/${comment.id}/like`, {});
-      
+      await toggleCommentLike(comment.id, user.id, !isLiked);
       if (isLiked) {
         setLikesCount(prev => prev - 1);
       } else {
@@ -80,9 +75,7 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
           setIsDisliked(false);
         }
       }
-      
       setIsLiked(!isLiked);
-      queryClient.invalidateQueries({ queryKey: [`/api/articles/${articleId}`] });
     } catch (error) {
       toast({
         title: "Error",
@@ -93,14 +86,12 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
   };
   
   const handleDislike = async () => {
-    if (!isAuthenticated) {
-      window.location.href = '/api/login';
+    if (!isAuthenticated || !user) {
+      window.location.href = '/login';
       return;
     }
-    
     try {
-      await apiRequest('POST', `/api/comments/${comment.id}/dislike`, {});
-      
+      await toggleCommentDislike(comment.id, user.id, !isDisliked);
       if (isDisliked) {
         setDislikesCount(prev => prev - 1);
       } else {
@@ -110,77 +101,11 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
           setIsLiked(false);
         }
       }
-      
       setIsDisliked(!isDisliked);
-      queryClient.invalidateQueries({ queryKey: [`/api/articles/${articleId}`] });
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to dislike comment",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const handleDelete = async () => {
-    if (!isAuthenticated || (!isAdmin && !isAuthor)) {
-      return;
-    }
-    
-    try {
-      await apiRequest('DELETE', `/api/comments/${comment.id}`, {});
-      queryClient.invalidateQueries({ queryKey: [`/api/articles/${articleId}`] });
-      toast({
-        title: "Comment deleted",
-        description: "Your comment has been deleted successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete comment",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const handleUpdate = async () => {
-    if (!isAuthenticated || !isAuthor || !editedContent.trim()) {
-      return;
-    }
-    
-    try {
-      await apiRequest('PATCH', `/api/comments/${comment.id}`, { content: editedContent });
-      queryClient.invalidateQueries({ queryKey: [`/api/articles/${articleId}`] });
-      setIsEditing(false);
-      toast({
-        title: "Comment updated",
-        description: "Your comment has been updated successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update comment",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const handleReport = async () => {
-    if (!isAuthenticated) {
-      window.location.href = '/api/login';
-      return;
-    }
-    
-    try {
-      await apiRequest('POST', `/api/comments/${comment.id}/report`, {});
-      toast({
-        title: "Comment reported",
-        description: "Thank you for helping us maintain a respectful community",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to report comment",
         variant: "destructive",
       });
     }
@@ -219,16 +144,16 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
                 {(isAdmin || isAuthor) && (
                   <>
                     <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                      <Edit className="mr-2 h-4 w-4" /> Edit
+                      Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    <DropdownMenuItem className="text-red-600">
+                      Delete
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <DropdownMenuItem onClick={handleReport}>
-                  <Flag className="mr-2 h-4 w-4" /> Report
+                <DropdownMenuItem>
+                  Report
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -245,7 +170,7 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
                 <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
                   Cancel
                 </Button>
-                <Button size="sm" onClick={handleUpdate}>
+                <Button size="sm">
                   Update
                 </Button>
               </div>
