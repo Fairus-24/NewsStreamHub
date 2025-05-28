@@ -194,38 +194,60 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
         </div>
 
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <Button
               variant="ghost"
               size="sm"
-              className={`p-0 h-auto flex items-center text-secondary ${liked ? 'text-red-500' : 'hover:text-primary'}`}
+              className={`group p-2 h-auto flex items-center rounded-full transition-all duration-300 ease-in-out ${
+                liked 
+                  ? 'text-red-500 bg-red-50 hover:bg-red-100 scale-105' 
+                  : 'text-gray-500 hover:text-red-500 hover:bg-red-50 hover:scale-110'
+              }`}
               onClick={handleLike}
             >
-              <Heart className={`mr-1 h-5 w-5 ${liked ? 'fill-current' : ''}`} />
-              <span>{article.likes}</span>
+              <Heart className={`mr-2 h-5 w-5 transition-all duration-300 ${
+                liked 
+                  ? 'fill-current animate-pulse' 
+                  : 'group-hover:scale-110 group-hover:animate-bounce'
+              }`} />
+              <span className="font-medium text-sm transition-all duration-200 group-hover:font-semibold">
+                {article.likes}
+              </span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="p-0 h-auto flex items-center text-secondary hover:text-primary"
+              className="group p-2 h-auto flex items-center rounded-full transition-all duration-300 ease-in-out text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:scale-110"
               onClick={() => document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              <MessageSquare className="mr-1 h-5 w-5" />
-              <span>{article.comments?.length}</span>
+              <MessageSquare className="mr-2 h-5 w-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12" />
+              <span className="font-medium text-sm transition-all duration-200 group-hover:font-semibold">
+                {article.comments?.length}
+              </span>
             </Button>
-            <span className="flex items-center text-secondary">
-              <Eye className="mr-1 h-5 w-5" />
-              {article.viewCount}
+            <span className="group flex items-center p-2 rounded-full transition-all duration-300 ease-in-out text-gray-500 hover:text-green-600 hover:bg-green-50">
+              <Eye className="mr-2 h-5 w-5 transition-all duration-300 group-hover:scale-110" />
+              <span className="font-medium text-sm transition-all duration-200 group-hover:font-semibold">
+                {article.viewCount}
+              </span>
             </span>
           </div>
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
               size="sm"
-              className={`p-0 h-auto text-secondary ${bookmarked ? 'text-primary' : 'hover:text-primary'}`}
+              className={`group p-2 h-auto rounded-full transition-all duration-300 ease-in-out ${
+                bookmarked 
+                  ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 scale-105' 
+                  : 'text-gray-500 hover:text-amber-600 hover:bg-amber-50 hover:scale-110'
+              }`}
               onClick={handleBookmark}
             >
-              <Bookmark className={`h-5 w-5 ${bookmarked ? 'fill-current' : ''}`} />
+              <Bookmark className={`h-5 w-5 transition-all duration-300 ${
+                bookmarked 
+                  ? 'fill-current animate-pulse' 
+                  : 'group-hover:scale-110 group-hover:-rotate-12'
+              }`} />
             </Button>
             <Button
               variant="ghost"
