@@ -18,6 +18,8 @@ import {
 import CommentList from '@/components/comments/CommentList';
 import CommentForm from '@/components/comments/CommentForm';
 import { toggleArticleLike, toggleArticleBookmark } from '@/lib/firebaseArticleActions';
+import { onSnapshot, doc as firestoreDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface ArticleDetailProps {
   id: string;
@@ -60,6 +62,7 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
   const [bookmarked, setBookmarked] = useState(false);
 
   const { data: article, isLoading } = useQuery<ArticleDetailData>({
@@ -78,6 +81,25 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
     }
   }, [userInteractions]);
 
+  useEffect(() => {
+    if (!user) return;
+    // Listen for like state
+    const unsubArticle = onSnapshot(firestoreDoc(db, 'articles', String(id)), (snap) => {
+      const data = snap.data();
+      setLiked(Array.isArray(data?.likes) && data.likes.includes(user.id));
+      setLikeCount(Array.isArray(data?.likes) ? data.likes.length : 0);
+    });
+    // Listen for bookmark state
+    const unsubUser = onSnapshot(firestoreDoc(db, 'users', String(user.id)), (snap) => {
+      const data = snap.data();
+      setBookmarked(Array.isArray(data?.bookmarks) && data.bookmarks.includes(String(id)));
+    });
+    return () => {
+      unsubArticle();
+      unsubUser();
+    };
+  }, [id, user]);
+
   const handleLike = async () => {
     if (!isAuthenticated || !user) {
       window.location.href = '/login';
@@ -85,7 +107,6 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
     }
     try {
       await toggleArticleLike(id, user.id, !liked);
-      setLiked(!liked);
     } catch (error) {
       toast({
         title: "Error",
@@ -102,7 +123,6 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
     }
     try {
       await toggleArticleBookmark(id, user.id, !bookmarked);
-      setBookmarked(!bookmarked);
       toast({
         title: bookmarked ? "Removed from bookmarks" : "Added to bookmarks",
         description: bookmarked ? "Article removed from your bookmarks" : "Article saved to your bookmarks",
@@ -187,56 +207,34 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
             <Button
               variant="ghost"
               size="sm"
-              className={`group p-2 h-auto flex items-center rounded-full transition-all duration-300 ease-in-out ${
-                liked 
-                  ? 'text-red-500 bg-red-50 hover:bg-red-100 scale-105' 
-                  : 'text-gray-500 hover:text-red-500 hover:bg-red-50 hover:scale-110'
-              }`}
+              className={`group p-2 h-auto flex items-center rounded-full ${liked ? 'text-red-500 bg-red-50 hover:bg-red-100' : 'text-gray-500 hover:text-red-500 hover:bg-red-50'}`}
               onClick={handleLike}
             >
-              <Heart className={`mr-2 h-5 w-5 transition-all duration-300 ${
-                liked 
-                  ? 'fill-current animate-pulse' 
-                  : 'group-hover:scale-110 group-hover:animate-bounce'
-              }`} />
-              <span className="font-medium text-sm transition-all duration-200 group-hover:font-semibold">
-                {article.likes}
-              </span>
+              <Heart className={`mr-2 h-5 w-5 ${liked ? 'fill-current' : ''}`} />
+              <span className="font-medium text-sm">{likeCount}</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="group p-2 h-auto flex items-center rounded-full transition-all duration-300 ease-in-out text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:scale-110"
+              className="group p-2 h-auto flex items-center rounded-full text-gray-500 hover:text-blue-600 hover:bg-blue-50"
               onClick={() => document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              <MessageSquare className="mr-2 h-5 w-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12" />
-              <span className="font-medium text-sm transition-all duration-200 group-hover:font-semibold">
-                {article.comments?.length}
-              </span>
+              <MessageSquare className="mr-2 h-5 w-5" />
+              <span className="font-medium text-sm">{article?.comments?.length || 0}</span>
             </Button>
-            <span className="group flex items-center p-2 rounded-full transition-all duration-300 ease-in-out text-gray-500 hover:text-green-600 hover:bg-green-50">
-              <Eye className="mr-2 h-5 w-5 transition-all duration-300 group-hover:scale-110" />
-              <span className="font-medium text-sm transition-all duration-200 group-hover:font-semibold">
-                {article.viewCount}
-              </span>
+            <span className="group flex items-center p-2 rounded-full text-gray-500 hover:text-green-600 hover:bg-green-50">
+              <Eye className="mr-2 h-5 w-5" />
+              <span className="font-medium text-sm">{article?.viewCount || 0}</span>
             </span>
           </div>
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
               size="sm"
-              className={`group p-2 h-auto rounded-full transition-all duration-300 ease-in-out ${
-                bookmarked 
-                  ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 scale-105' 
-                  : 'text-gray-500 hover:text-amber-600 hover:bg-amber-50 hover:scale-110'
-              }`}
+              className={`group p-2 h-auto rounded-full ${bookmarked ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-gray-500 hover:text-amber-600 hover:bg-amber-50'}`}
               onClick={handleBookmark}
             >
-              <Bookmark className={`h-5 w-5 transition-all duration-300 ${
-                bookmarked 
-                  ? 'fill-current animate-pulse' 
-                  : 'group-hover:scale-110 group-hover:-rotate-12'
-              }`} />
+              <Bookmark className={`h-5 w-5 ${bookmarked ? 'fill-current' : ''}`} />
             </Button>
             <Button
               variant="ghost"
@@ -278,7 +276,7 @@ export default function ArticleDetail({ id }: ArticleDetailProps) {
         
         <CommentForm articleId={id} />
         
-        <CommentList comments={article.comments || []} articleId={id} />
+        <CommentList articleId={id} />
       </div>
     </section>
   );

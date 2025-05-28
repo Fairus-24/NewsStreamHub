@@ -10,12 +10,12 @@ export async function addComment({ articleId, user, content, parentId }: {
 }) {
   const commentsRef = collection(db, 'comments');
   await addDoc(commentsRef, {
-    articleId,
-    authorId: user.id,
+    articleId: String(articleId),
+    authorId: String(user.id),
     authorName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
     authorImage: user.profileImageUrl || '',
     content,
-    parentId: parentId || null,
+    parentId: parentId ? String(parentId) : null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     likes: [],

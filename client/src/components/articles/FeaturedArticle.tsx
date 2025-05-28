@@ -5,9 +5,11 @@ import { Heart, MessageSquare, Bookmark } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { toggleArticleLike, toggleArticleBookmark } from '@/lib/firebaseArticleActions';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
+import { onSnapshot, doc as firestoreDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface FeaturedArticleProps {
   id: string;
@@ -87,6 +89,24 @@ export default function FeaturedArticle({
     }
   };
 
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(firestoreDoc(db, 'articles', String(id)), (snap) => {
+      const data = snap.data();
+      setLiked(Array.isArray(data?.likes) && data.likes.includes(user.id));
+      setLikeCount(Array.isArray(data?.likes) ? data.likes.length : 0);
+    });
+    return () => unsub();
+  }, [id, user]);
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(firestoreDoc(db, 'users', String(user.id)), (snap) => {
+      const data = snap.data();
+      setBookmarked(Array.isArray(data?.bookmarks) && data.bookmarks.includes(String(id)));
+    });
+    return () => unsub();
+  }, [id, user]);
+
   return (
     <section className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
       <div className="md:flex">
@@ -134,19 +154,11 @@ export default function FeaturedArticle({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className={`group p-2 h-auto flex items-center rounded-full transition-all duration-300 ease-in-out ${
-                  liked 
-                    ? 'text-red-500 bg-red-50 hover:bg-red-100 scale-105' 
-                    : 'text-gray-500 hover:text-red-500 hover:bg-red-50 hover:scale-110'
-                }`}
+                className={`group p-2 h-auto flex items-center rounded-full ${liked ? 'text-red-500 bg-red-50 hover:bg-red-100' : 'text-gray-500 hover:text-red-500 hover:bg-red-50'}`}
                 onClick={handleLike}
               >
-                <Heart className={`w-5 h-5 mr-2 transition-all duration-300 ${
-                  liked 
-                    ? 'fill-current animate-pulse' 
-                    : 'group-hover:scale-110 group-hover:animate-bounce'
-                }`} />
-                <span className="font-medium text-sm transition-all duration-200 group-hover:font-semibold">
+                <Heart className={`w-5 h-5 mr-2 ${liked ? 'fill-current' : ''}`} />
+                <span className="font-medium text-sm">
                   {likeCount}
                 </span>
               </Button>
@@ -165,18 +177,10 @@ export default function FeaturedArticle({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className={`group p-2 h-auto rounded-full transition-all duration-300 ease-in-out ${
-                  bookmarked 
-                    ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 scale-105' 
-                    : 'text-gray-500 hover:text-amber-600 hover:bg-amber-50 hover:scale-110'
-                }`}
+                className={`group p-2 h-auto rounded-full ${bookmarked ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-gray-500 hover:text-amber-600 hover:bg-amber-50'}`}
                 onClick={handleBookmark}
               >
-                <Bookmark className={`w-5 h-5 transition-all duration-300 ${
-                  bookmarked 
-                    ? 'fill-current animate-pulse' 
-                    : 'group-hover:scale-110 group-hover:-rotate-12'
-                }`} />
+                <Bookmark className={`w-5 h-5 ${bookmarked ? 'fill-current' : ''}`} />
               </Button>
             </div>
           </div>

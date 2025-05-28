@@ -27,27 +27,25 @@ export default function BookmarksPage() {
     async function fetchBookmarks() {
       if (!user) return;
       setIsLoading(true);
-      // Fetch articles where articleId in user.bookmarks
       const userDoc = await (await import('firebase/firestore')).getDoc((await import('firebase/firestore')).doc(db, 'users', user.id));
       const userData = userDoc.exists() ? userDoc.data() : {};
-      let bookmarkIds = userData.bookmarks || [];
-      // Pastikan semua ID string
-      bookmarkIds = bookmarkIds.map((id: any) => String(id));
+      const bookmarkIds = (userData.bookmarks || []).map((id: any) => String(id));
       if (bookmarkIds.length === 0) {
         setBookmarks([]);
         setFilteredBookmarks([]);
         setIsLoading(false);
         return;
       }
-      // Firestore hanya mengizinkan max 10 ID per query
-      let articles: any[] = [];
+      const articlesRef = collection(db, 'articles');
+      // Batch Firestore 'in' queries (max 10 per batch)
+      const batches = [];
       for (let i = 0; i < bookmarkIds.length; i += 10) {
         const batchIds = bookmarkIds.slice(i, i + 10);
-        const articlesRef = collection(db, 'articles');
         const q = query(articlesRef, where('__name__', 'in', batchIds));
-        const snapshot = await getDocs(q);
-        articles = articles.concat(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        batches.push(getDocs(q));
       }
+      const snapshots = await Promise.all(batches);
+      const articles = snapshots.flatMap(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setBookmarks(articles);
       setFilteredBookmarks(articles);
       setIsLoading(false);
@@ -141,7 +139,7 @@ export default function BookmarksPage() {
                 date={bookmark.createdAt}
                 image={bookmark.image}
                 likes={bookmark.likes}
-                comments={bookmark.comments.length}
+                comments={Array.isArray(bookmark.comments) ? bookmark.comments.length : 0}
                 isBookmarked={true}
                 isLiked={bookmark.isLiked}
                 variant="full"

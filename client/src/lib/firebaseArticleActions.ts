@@ -4,7 +4,7 @@ import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from 'firebas
 
 // Like or unlike an article for a user
 export async function toggleArticleLike(articleId: string, userId: string, liked: boolean) {
-  const articleRef = doc(db, 'articles', articleId);
+  const articleRef = doc(db, 'articles', String(articleId));
   const articleSnap = await getDoc(articleRef);
   if (!articleSnap.exists()) {
     // Optionally create the article doc if not exists
@@ -17,12 +17,12 @@ export async function toggleArticleLike(articleId: string, userId: string, liked
 
 // Bookmark or unbookmark an article for a user
 export async function toggleArticleBookmark(articleId: string, userId: string, bookmarked: boolean) {
-  const userRef = doc(db, 'users', userId);
+  const userRef = doc(db, 'users', String(userId));
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) {
     throw new Error('User not found');
   }
   await updateDoc(userRef, {
-    bookmarks: bookmarked ? arrayUnion(articleId) : arrayRemove(articleId)
+    bookmarks: bookmarked ? arrayUnion(String(articleId)) : arrayRemove(String(articleId))
   });
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/utils';
@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toggleCommentLike, toggleCommentDislike } from '@/lib/firebaseCommentLikeActions';
+import { doc, deleteDoc, onSnapshot, doc as firestoreDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface Comment {
   id: string;
@@ -58,6 +60,19 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
   
   const isAdmin = user?.role === 'admin' || user?.role === 'developer';
   const isAuthor = comment.isAuthor || user?.id === comment.author.id;
+  
+  useEffect(() => {
+    if (!user) return;
+    // Listen for like/dislike state for this comment
+    const unsub = onSnapshot(firestoreDoc(db, 'comments', String(comment.id)), (snap) => {
+      const data = snap.data();
+      setIsLiked(Array.isArray(data?.likes) && data.likes.includes(user.id));
+      setIsDisliked(Array.isArray(data?.dislikes) && data.dislikes.includes(user.id));
+      setLikesCount(Array.isArray(data?.likes) ? data.likes.length : 0);
+      setDislikesCount(Array.isArray(data?.dislikes) ? data.dislikes.length : 0);
+    });
+    return () => unsub();
+  }, [comment.id, user]);
   
   const handleLike = async () => {
     if (!isAuthenticated || !user) {
@@ -111,6 +126,27 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
     }
   };
   
+  const handleDelete = async () => {
+    if (!isAuthenticated || !user) {
+      window.location.href = '/login';
+      return;
+    }
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    try {
+      await deleteDoc(doc(db, 'comments', comment.id));
+      toast({
+        title: 'Comment deleted',
+        description: 'Your comment has been deleted.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete comment',
+        variant: 'destructive',
+      });
+    }
+  };
+  
   return (
     <div className={isReply ? '' : 'border-b border-border-gray pb-6'}>
       <div className="flex items-start">
@@ -146,7 +182,7 @@ export default function CommentItem({ comment, articleId, isReply = false }: Com
                     <DropdownMenuItem onClick={() => setIsEditing(true)}>
                       Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">
+                    <DropdownMenuItem className="text-red-600" onClick={handleDelete}>
                       Delete
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
