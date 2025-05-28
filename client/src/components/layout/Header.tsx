@@ -43,22 +43,24 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white border-b border-border-gray sticky top-0 z-50">
+    <header className="bg-white/95 backdrop-blur-md border-b border-border-gray sticky top-0 z-50 shadow-sm transition-all duration-300">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center py-3">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center">
-              <Newspaper className="text-primary text-3xl mr-2" />
-              <h1 className="font-headline font-bold text-2xl text-primary">NewsHub</h1>
+        <div className="flex justify-between items-center py-4">
+          <div className="flex items-center group">
+            <Link href="/" className="flex items-center transition-transform duration-300 hover:scale-105">
+              <Newspaper className="text-primary text-3xl mr-3 transition-all duration-300 group-hover:rotate-12 group-hover:text-accent" />
+              <h1 className="font-headline font-bold text-2xl text-primary transition-all duration-300 group-hover:text-accent bg-gradient-to-r from-primary to-accent bg-clip-text">
+                NewsHub
+              </h1>
             </Link>
           </div>
           
-          <div className="hidden md:flex space-x-1">
-            <form onSubmit={handleSearch} className="relative mr-2">
+          <div className="hidden md:flex items-center space-x-4">
+            <form onSubmit={handleSearch} className="relative group">
               <Input
                 type="search"
-                placeholder="Search..."
-                className="w-[200px] pr-8"
+                placeholder="Search news..."
+                className="w-[280px] pr-12 pl-4 py-2 rounded-full border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-300 hover:shadow-md"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -66,56 +68,64 @@ export default function Header() {
                 type="submit" 
                 variant="ghost" 
                 size="icon" 
-                className="absolute right-0 top-0 h-full"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-primary text-white hover:bg-primary/90 transition-all duration-300 hover:scale-110"
               >
-                <Search className="h-4 w-4 text-secondary" />
+                <Search className="h-4 w-4" />
               </Button>
             </form>
 
             {isLoading ? (
-              <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse"></div>
+              <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 animate-pulse"></div>
             ) : isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="p-2 hover:bg-light-gray rounded-md flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
+                  <Button variant="ghost" className="group p-3 hover:bg-primary/5 rounded-xl flex items-center gap-3 transition-all duration-300 hover:shadow-lg hover:scale-105">
+                    <Avatar className="h-10 w-10 ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all duration-300">
                       <AvatarImage src={user?.profileImageUrl} />
-                      <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
+                      <AvatarFallback className="bg-gradient-to-r from-primary to-accent text-white font-bold">
+                        {getInitials(user?.firstName, user?.lastName)}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className="font-ui text-sm font-medium">
+                    <span className="font-ui text-sm font-medium group-hover:text-primary transition-colors duration-300">
                       {user?.firstName || 'User'}
                     </span>
-                    <ChevronDown className="h-4 w-4 text-secondary" />
+                    <ChevronDown className="h-4 w-4 text-secondary group-hover:text-primary transition-all duration-300 group-hover:rotate-180" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-md border-0 shadow-xl rounded-xl p-2 animate-in slide-in-from-top-2 duration-300">
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">Your Profile</Link>
+                    <Link href="/profile" className="flex items-center px-3 py-2 rounded-lg hover:bg-primary/10 transition-all duration-200">
+                      Your Profile
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/bookmarks">Bookmarks</Link>
+                    <Link href="/bookmarks" className="flex items-center px-3 py-2 rounded-lg hover:bg-primary/10 transition-all duration-200">
+                      Bookmarks
+                    </Link>
                   </DropdownMenuItem>
                   
                   {isAdmin && (
                     <>
-                      <DropdownMenuSeparator />
+                      <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-2" />
                       <DropdownMenuItem asChild>
-                        <Link href="/admin" className="flex items-center">
+                        <Link href="/admin" className="flex items-center px-3 py-2 rounded-lg hover:bg-accent/10 transition-all duration-200">
                           Admin Dashboard
-                          <Crown className="h-4 w-4 ml-2 text-accent" />
+                          <Crown className="h-4 w-4 ml-auto text-accent animate-pulse" />
                         </Link>
                       </DropdownMenuItem>
                     </>
                   )}
                   
-                  <DropdownMenuSeparator />
+                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-2" />
                   <DropdownMenuItem asChild>
-                    <a href="/api/logout" className="text-red-600">Sign Out</a>
+                    <a href="/api/logout" className="flex items-center px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200">
+                      Sign Out
+                    </a>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button asChild variant="default">
+              <Button asChild variant="default" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white px-6 py-2 rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg">
                 <a href="/api/login">Sign In</a>
               </Button>
             )}
@@ -124,25 +134,33 @@ export default function Header() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden" 
+            className="md:hidden p-2 rounded-xl hover:bg-primary/10 transition-all duration-300 hover:scale-110" 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            <Menu className="h-6 w-6 text-secondary" />
+            <Menu className={`h-6 w-6 text-secondary transition-all duration-300 ${mobileMenuOpen ? 'rotate-90 text-primary' : 'hover:text-primary'}`} />
           </Button>
         </div>
         
-        <nav className="py-2 overflow-x-auto scrollbar-hide">
-          <ul className="flex space-x-6 whitespace-nowrap">
-            {categories.map((category) => (
-              <li key={category.slug}>
-                <Link href={category.slug ? `/category/${category.slug}` : '/'} 
-                  className={`font-ui font-medium ${
+        <nav className="py-3 overflow-x-auto scrollbar-hide border-t border-gray-100">
+          <ul className="flex space-x-8 whitespace-nowrap">
+            {categories.map((category, index) => (
+              <li key={category.slug} className="relative group" style={{ animationDelay: `${index * 50}ms` }}>
+                <Link 
+                  href={category.slug ? `/category/${category.slug}` : '/'} 
+                  className={`relative font-ui font-medium py-2 px-3 rounded-lg transition-all duration-300 hover:scale-105 ${
                     (location === '/' && category.slug === '') || 
                     (location.includes(`/category/${category.slug}`) && category.slug !== '')
-                      ? 'text-primary border-b-2 border-primary pb-2' 
-                      : 'text-secondary hover:text-primary pb-2'
-                  }`}>
-                    {category.name}
+                      ? 'text-primary bg-primary/10 shadow-sm' 
+                      : 'text-secondary hover:text-primary hover:bg-primary/5'
+                  }`}
+                >
+                  {category.name}
+                  <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-gradient-to-r from-primary to-accent transition-all duration-300 ${
+                    (location === '/' && category.slug === '') || 
+                    (location.includes(`/category/${category.slug}`) && category.slug !== '')
+                      ? 'w-full' 
+                      : 'w-0 group-hover:w-full'
+                  }`} />
                 </Link>
               </li>
             ))}
@@ -152,13 +170,13 @@ export default function Header() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white shadow-md rounded-md p-4 mb-6 mx-4">
-          <div className="mb-4">
-            <form onSubmit={handleSearch} className="relative mb-4">
+        <div className="md:hidden bg-white/95 backdrop-blur-md shadow-xl rounded-b-2xl mx-4 mb-4 overflow-hidden animate-in slide-in-from-top-2 duration-300">
+          <div className="p-6">
+            <form onSubmit={handleSearch} className="relative mb-6 group">
               <Input
                 type="search"
                 placeholder="Search for news..."
-                className="w-full pr-8"
+                className="w-full pr-12 pl-4 py-3 rounded-full border-2 border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-300"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -166,43 +184,47 @@ export default function Header() {
                 type="submit" 
                 variant="ghost" 
                 size="icon" 
-                className="absolute right-0 top-0 h-full"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-primary text-white hover:bg-primary/90 transition-all duration-300"
               >
-                <Search className="h-4 w-4 text-secondary" />
+                <Search className="h-4 w-4" />
               </Button>
             </form>
 
             {isAuthenticated ? (
               <>
-                <div className="flex items-center mb-4">
-                  <Avatar className="h-10 w-10 mr-3">
+                <div className="flex items-center mb-6 p-3 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5">
+                  <Avatar className="h-12 w-12 mr-4 ring-2 ring-primary/20">
                     <AvatarImage src={user?.profileImageUrl} />
-                    <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
+                    <AvatarFallback className="bg-gradient-to-r from-primary to-accent text-white font-bold">
+                      {getInitials(user?.firstName, user?.lastName)}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-ui font-medium">{user?.firstName || 'User'}</p>
-                    <p className="text-sm text-secondary">{user?.role || 'User'}</p>
+                    <p className="font-ui font-semibold text-lg">{user?.firstName || 'User'}</p>
+                    <p className="text-sm text-secondary capitalize">{user?.role || 'User'}</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Link href="/profile" className="block p-2 rounded-md hover:bg-light-gray text-sm font-ui">
+                <div className="space-y-3">
+                  <Link href="/profile" className="block p-3 rounded-xl hover:bg-primary/10 text-sm font-ui transition-all duration-300 hover:translate-x-2">
                     Your Profile
                   </Link>
-                  <Link href="/bookmarks" className="block p-2 rounded-md hover:bg-light-gray text-sm font-ui">
+                  <Link href="/bookmarks" className="block p-3 rounded-xl hover:bg-primary/10 text-sm font-ui transition-all duration-300 hover:translate-x-2">
                     Bookmarks
                   </Link>
                   
                   {isAdmin && (
-                    <Link href="/admin" className="block p-2 rounded-md bg-primary bg-opacity-10 text-primary text-sm font-ui mt-2">
+                    <Link href="/admin" className="block p-3 rounded-xl bg-gradient-to-r from-accent/10 to-accent/20 text-accent text-sm font-ui font-semibold transition-all duration-300 hover:translate-x-2">
                       Admin Dashboard
                     </Link>
                   )}
                   
-                  <a href="/api/logout" className="block p-2 rounded-md hover:bg-light-gray text-red-600 text-sm font-ui mt-2">Sign Out</a>
+                  <a href="/api/logout" className="block p-3 rounded-xl hover:bg-red-50 text-red-600 text-sm font-ui transition-all duration-300 hover:translate-x-2">
+                    Sign Out
+                  </a>
                 </div>
               </>
             ) : (
-              <Button asChild className="w-full">
+              <Button asChild className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white py-3 rounded-xl font-semibold transition-all duration-300">
                 <a href="/api/login">Sign In</a>
               </Button>
             )}
