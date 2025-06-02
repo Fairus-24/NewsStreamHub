@@ -4,34 +4,52 @@ import { useState } from 'react';
 import ArticleCard from '@/components/articles/ArticleCard';
 import Sidebar from '@/components/layout/Sidebar';
 import { Button } from '@/components/ui/button';
+import { getArticlesByCategorySlug } from '@/lib/firebaseCategoryActions';
 
 export default function CategoryPage() {
   const { slug } = useParams();
   const [, setLocation] = useLocation();
   const [page, setPage] = useState(1);
-  
-  const { data, isLoading } = useQuery<any>({
-    queryKey: ['/api/category/' + slug],
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['category', slug, page],
+    queryFn: () => slug ? getArticlesByCategorySlug(slug, page) : Promise.resolve({ category: null, articles: [], hasMore: false }),
     enabled: !!slug,
   });
-  
+
   const category = data?.category;
   const articles = data?.articles || [];
   const hasMore = data?.hasMore || false;
-  
-  if (!category && !isLoading) {
-    setLocation('/');
-    return null;
+
+  // Fix: fallback to slug param if category is missing name/slug
+  let categoryName = '';
+  if (category && typeof category === 'object') {
+    categoryName = (category as any).name || (category as any).slug || '';
   }
-  
-  const categoryName = category?.name || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : "");
-  
+  if (!categoryName && slug) {
+    categoryName = slug.charAt(0).toUpperCase() + slug.slice(1);
+  }
+
+  if (!category && !isLoading) {
+    // Don't call setLocation here! Instead, show a message or use useEffect for navigation.
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="bg-white p-8 rounded-lg shadow-sm border border-border-gray text-center">
+          <h2 className="font-headline text-xl font-bold mb-4">Category not found</h2>
+          <p className="text-secondary mb-6">The category you are looking for does not exist.</p>
+          <Button asChild>
+            <a href="/">Return to Home</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col lg:flex-row lg:space-x-8">
         <div className="lg:w-2/3">
           <h1 className="font-headline text-3xl font-bold mb-6">{categoryName}</h1>
-          
           {isLoading ? (
             <div className="space-y-6">
               {Array(5).fill(0).map((_, index) => (
@@ -58,17 +76,16 @@ export default function CategoryPage() {
                   id={article.id}
                   title={article.title}
                   excerpt={article.excerpt}
-                  category={article.category?.name || 'Uncategorized'}
+                  category={categoryName}
                   date={article.createdAt}
                   image={article.image}
-                  likes={article.likes}
+                  likes={article.likes || 0}
                   comments={article.comments?.length || 0}
                   isBookmarked={article.isBookmarked}
                   isLiked={article.isLiked}
                   variant="full"
                 />
               ))}
-              
               {hasMore && (
                 <div className="flex justify-center">
                   <Button 
@@ -90,7 +107,6 @@ export default function CategoryPage() {
             </div>
           )}
         </div>
-        
         <Sidebar />
       </div>
     </div>
