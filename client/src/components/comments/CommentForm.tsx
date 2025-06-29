@@ -27,7 +27,10 @@ export default function CommentForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated || !user) {
-      window.location.href = '/login';
+      // Redirect to Firebase Google Sign-In
+      const provider = new (await import('firebase/auth')).GoogleAuthProvider();
+      const { auth } = await import('@/lib/firebase');
+      await (await import('firebase/auth')).signInWithPopup(auth, provider);
       return;
     }
     if (!content.trim()) {

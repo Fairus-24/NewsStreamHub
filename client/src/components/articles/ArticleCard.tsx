@@ -45,7 +45,10 @@ export default function ArticleCard({
 
   const handleLike = async () => {
     if (!isAuthenticated || !user) {
-      window.location.href = '/login';
+      // Redirect to Firebase Google Sign-In
+      const provider = new (await import('firebase/auth')).GoogleAuthProvider();
+      const { auth } = await import('@/lib/firebase');
+      await (await import('firebase/auth')).signInWithPopup(auth, provider);
       return;
     }
     try {
@@ -63,7 +66,10 @@ export default function ArticleCard({
 
   const handleBookmark = async () => {
     if (!isAuthenticated || !user) {
-      window.location.href = '/login';
+      // Redirect to Firebase Google Sign-In
+      const provider = new (await import('firebase/auth')).GoogleAuthProvider();
+      const { auth } = await import('@/lib/firebase');
+      await (await import('firebase/auth')).signInWithPopup(auth, provider);
       return;
     }
     try {

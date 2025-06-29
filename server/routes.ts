@@ -336,7 +336,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // User stats endpoint (auth removed)
   app.get('/api/user/stats', async (req: any, res) => {
-    return res.status(401).json({ message: "User authentication required" });
+    // Get userId from query or header (since auth is removed)
+    const userId = req.query.userId || req.headers['x-user-id'];
+    if (!userId || typeof userId !== 'string') {
+      return res.status(400).json({ message: "Missing userId" });
+    }
+    try {
+      // Use Firestore-based aggregation
+      const { getFirestoreUserStats } = await import('./firebaseUserStats');
+      const stats = await getFirestoreUserStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      res.status(500).json({ message: 'Failed to fetch user stats' });
+    }
   });
 
   // User preferences endpoint (auth removed)
