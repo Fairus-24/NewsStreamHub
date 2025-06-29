@@ -1,19 +1,39 @@
 import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ArticleCard from '@/components/articles/ArticleCard';
 import Sidebar from '@/components/layout/Sidebar';
 import { Button } from '@/components/ui/button';
-import { getArticlesByCategorySlug } from '@/lib/firebaseCategoryActions';
 
-export default function CategoryPage() {
+function CategoryPage() {
   const { slug } = useParams();
   const [, setLocation] = useLocation();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset page on new search
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Fetch articles by category from backend API
+  const fetchArticlesByCategory = async (slug: string, page: number, search: string) => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    if (search) params.set('search', search);
+    const res = await fetch(`/api/categories/${slug}/articles?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch articles');
+    return res.json();
+  };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['category', slug, page],
-    queryFn: () => slug ? getArticlesByCategorySlug(slug, page) : Promise.resolve({ category: null, articles: [], hasMore: false }),
+    queryKey: ['category', slug, page, debouncedSearch],
+    queryFn: () => slug ? fetchArticlesByCategory(slug, page, debouncedSearch) : Promise.resolve({ category: null, articles: [], hasMore: false }),
     enabled: !!slug,
   });
 
@@ -50,6 +70,16 @@ export default function CategoryPage() {
       <div className="flex flex-col lg:flex-row lg:space-x-8">
         <div className="lg:w-2/3">
           <h1 className="font-headline text-3xl font-bold mb-6">{categoryName}</h1>
+          {/* Search input */}
+          <div className="mb-6">
+            <input
+              type="text"
+              className="w-full px-4 py-2 border border-border-gray rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Search articles in this category..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
           {isLoading ? (
             <div className="space-y-6">
               {Array(5).fill(0).map((_, index) => (
@@ -112,3 +142,5 @@ export default function CategoryPage() {
     </div>
   );
 }
+
+export default CategoryPage;

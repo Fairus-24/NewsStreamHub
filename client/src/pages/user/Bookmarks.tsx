@@ -5,15 +5,14 @@ import ArticleCard from '@/components/articles/ArticleCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function BookmarksPage() {
   const { user, isLoading: isLoadingAuth } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredBookmarks, setFilteredBookmarks] = useState<any[]>([]);
-  const [bookmarks, setBookmarks] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -22,17 +21,28 @@ export default function BookmarksPage() {
     }
   }, [user, isLoadingAuth]);
 
-  // Fetch bookmarks from Firestore
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setPage(1);
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Fetch bookmarks from Firestore (by user)
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     async function fetchBookmarks() {
       if (!user) return;
       setIsLoading(true);
-      const userDoc = await (await import('firebase/firestore')).getDoc((await import('firebase/firestore')).doc(db, 'users', user.id));
+      const userDoc = await getDoc(doc(db, 'users', user.id));
       const userData = userDoc.exists() ? userDoc.data() : {};
       const bookmarkIds = (userData.bookmarks || []).map((id: any) => String(id));
       if (bookmarkIds.length === 0) {
         setBookmarks([]);
-        setFilteredBookmarks([]);
         setIsLoading(false);
         return;
       }
@@ -45,31 +55,42 @@ export default function BookmarksPage() {
         batches.push(getDocs(q));
       }
       const snapshots = await Promise.all(batches);
-      const articles = snapshots.flatMap(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      let articles = snapshots.flatMap(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+      // Fetch author and category for each article
+      articles = await Promise.all(articles.map(async (a: any) => {
+        let author = null;
+        let category = null;
+        if (a.authorId) {
+          const authorSnap = await getDoc(doc(db, 'users', a.authorId));
+          if (authorSnap.exists()) {
+            author = { id: authorSnap.id, ...authorSnap.data() };
+          }
+        }
+        if (a.categoryId) {
+          const catSnap = await getDoc(doc(db, 'categories', a.categoryId));
+          if (catSnap.exists()) {
+            category = { id: catSnap.id, ...catSnap.data() };
+          }
+        }
+        return { ...a, author, category };
+      }));
+
+      // Optional: filter by search
+      if (debouncedSearch) {
+        const lower = debouncedSearch.toLowerCase();
+        articles = articles.filter((a: any) =>
+          a.title?.toLowerCase().includes(lower) ||
+          a.excerpt?.toLowerCase().includes(lower) ||
+          a.author?.firstName?.toLowerCase().includes(lower) ||
+          a.category?.name?.toLowerCase().includes(lower)
+        );
+      }
       setBookmarks(articles);
-      setFilteredBookmarks(articles);
       setIsLoading(false);
     }
     fetchBookmarks();
-  }, [user]);
-
-  // Filter bookmarks when search query changes
-  useEffect(() => {
-    if (bookmarks) {
-      if (!searchQuery) {
-        setFilteredBookmarks(bookmarks);
-      } else {
-        const lowercaseQuery = searchQuery.toLowerCase();
-        setFilteredBookmarks(
-          bookmarks.filter((bookmark: any) => 
-            bookmark.title?.toLowerCase().includes(lowercaseQuery) ||
-            bookmark.excerpt?.toLowerCase().includes(lowercaseQuery) ||
-            bookmark.category?.name?.toLowerCase().includes(lowercaseQuery)
-          )
-        );
-      }
-    }
-  }, [searchQuery, bookmarks]);
+  }, [user, debouncedSearch]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,21 +114,15 @@ export default function BookmarksPage() {
       <div className="max-w-5xl mx-auto">
         <h1 className="font-headline text-3xl font-bold mb-6">Your Bookmarks</h1>
 
-        <form onSubmit={handleSearch} className="mb-8">
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="Search your bookmarks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit">
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
-          </div>
-        </form>
+        <div className="mb-8">
+          <Input
+            type="text"
+            placeholder="Search your bookmarks..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="flex-1"
+          />
+        </div>
 
         {isLoading ? (
           <div className="space-y-6">
@@ -127,24 +142,37 @@ export default function BookmarksPage() {
               </div>
             ))}
           </div>
-        ) : filteredBookmarks && filteredBookmarks.length > 0 ? (
+        ) : bookmarks && bookmarks.length > 0 ? (
           <div className="space-y-6">
-            {filteredBookmarks.map((bookmark: any) => (
-              <ArticleCard
-                key={bookmark.id}
-                id={bookmark.id}
-                title={bookmark.title}
-                excerpt={bookmark.excerpt}
-                category={bookmark.category?.name || 'Uncategorized'}
-                date={bookmark.createdAt}
-                image={bookmark.image}
-                likes={bookmark.likes}
-                comments={Array.isArray(bookmark.comments) ? bookmark.comments.length : 0}
-                isBookmarked={true}
-                isLiked={bookmark.isLiked}
-                variant="full"
-              />
-            ))}
+            {bookmarks.map((article: any) => {
+              // Convert Firestore Timestamp to string if needed
+              let dateStr = '';
+              if (article.createdAt) {
+                if (typeof article.createdAt === 'string') {
+                  dateStr = article.createdAt;
+                } else if (article.createdAt.toDate) {
+                  dateStr = article.createdAt.toDate().toISOString();
+                } else {
+                  dateStr = String(article.createdAt);
+                }
+              }
+              return (
+                <ArticleCard
+                  key={article.id}
+                  id={article.id}
+                  title={article.title || ''}
+                  excerpt={article.excerpt || ''}
+                  category={article.category?.name || 'Uncategorized'}
+                  date={dateStr}
+                  image={article.image || ''}
+                  likes={Array.isArray(article.likes) ? article.likes.length : (typeof article.likes === 'number' ? article.likes : 0)}
+                  comments={Array.isArray(article.comments) ? article.comments.length : 0}
+                  isBookmarked={true}
+                  isLiked={Array.isArray(article.likes) && user ? article.likes.includes(user.id) : false}
+                  variant="full"
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="bg-white p-8 rounded-lg shadow-sm border border-border-gray text-center">
@@ -159,8 +187,8 @@ export default function BookmarksPage() {
                 <p className="text-secondary mb-6">You haven't bookmarked any articles yet. Browse our articles and click the bookmark icon to save them for later.</p>
               </>
             )}
-            <Button asChild>
-              <a href="/">Browse Articles</a>
+            <Button onClick={() => window.location.href = "/"}>
+              Browse Articles
             </Button>
           </div>
         )}

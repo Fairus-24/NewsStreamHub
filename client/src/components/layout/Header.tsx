@@ -28,7 +28,7 @@ const categories = [
 
 export default function Header() {
   const [location] = useLocation();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, authSource } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,12 +45,20 @@ export default function Header() {
   };
 
   const handleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    if (authSource === 'oidc') {
+      window.location.href = '/api/login';
+    } else {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    }
   };
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    if (authSource === 'oidc') {
+      window.location.href = '/api/logout';
+    } else {
+      await signOut(auth);
+    }
   };
 
   return (
@@ -135,7 +143,7 @@ export default function Header() {
               </DropdownMenu>
             ) : (
               <Button onClick={handleSignIn} variant="default" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white px-6 py-2 rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg">
-                Sign In with Google
+                {authSource === 'oidc' ? 'Sign In with SSO' : 'Sign In with Google'}
               </Button>
             )}
           </div>
@@ -232,7 +240,7 @@ export default function Header() {
               </>
             ) : (
               <Button onClick={handleSignIn} className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white py-3 rounded-xl font-semibold transition-all duration-300">
-                Sign In with Google
+                {authSource === 'oidc' ? 'Sign In with SSO' : 'Sign In with Google'}
               </Button>
             )}
           </div>

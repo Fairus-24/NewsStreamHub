@@ -1,30 +1,35 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { getFirestoreArticleById, getFirestoreArticles, getFirestoreArticlesByCategory } from './firestoreArticleService';
+import { adminDb } from './firebaseAdmin';
+import { getFirestoreUserProfile, updateFirestoreUserProfile } from './firebaseUserService';
+// OIDC/Passport auth removed
 import { z } from "zod";
 import { 
   articleSchema, 
-  categorySchema, 
   insertArticleSchema, 
-  insertCommentSchema 
+  insertCommentSchema, 
+  insertCategorySchema
 } from "@shared/schema";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup Authentication
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+// Extend Express Request type to include 'user'
+declare global {
+  namespace Express {
+    interface User {
+      claims?: { sub?: string };
+      [key: string]: any;
     }
-  });
+    interface Request {
+      user?: User;
+    }
+  }
+}
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // OIDC/Passport auth removed
+
+  // Auth routes removed
 
   // Categories
   app.get('/api/categories', async (req, res) => {
@@ -40,7 +45,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Home page data
   app.get('/api/articles/featured', async (req, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      // const userId = req.user?.claims?.sub;
+      const userId = undefined;
       const featured = await storage.getFeaturedArticle(userId);
       res.json(featured);
     } catch (error) {
@@ -49,37 +55,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Hybrid: get trending articles (Firestore first, fallback to SQL)
   app.get('/api/articles/trending', async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
-      const userId = req.user?.claims?.sub;
-      const trending = await storage.getTrendingArticles(page, userId);
-      res.json(trending);
+      // Firestore: sort by viewCount and createdAt (recent & popular)
+      const snapshot = await adminDb.collection('articles')
+        .orderBy('viewCount', 'desc')
+        .orderBy('createdAt', 'desc')
+        .limit(10)
+        .offset((page - 1) * 10)
+        .get();
+      const articles = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      if (articles && articles.length > 0) return res.json({ articles, hasMore: false });
+      // Fallback to SQL
+      const sqlResult = await storage.getTrendingArticles(page, undefined);
+      res.json(sqlResult);
     } catch (error) {
-      console.error("Error fetching trending articles:", error);
-      res.status(500).json({ message: "Failed to fetch trending articles" });
+      console.error('Error fetching trending articles:', error);
+      res.status(500).json({ message: 'Failed to fetch trending articles' });
     }
   });
 
+  // Hybrid: get latest articles (Firestore first, fallback to SQL)
   app.get('/api/articles/latest', async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
-      const userId = req.user?.claims?.sub;
-      const latest = await storage.getLatestArticles(page, userId);
-      res.json(latest);
+      // Try Firestore first
+      const articles = await getFirestoreArticles({ page });
+      if (articles && articles.length > 0) return res.json({ articles, hasMore: false });
+      // Fallback to SQL
+      // const userId = req.user?.claims?.sub;
+      const userId = undefined;
+      const sqlResult = await storage.getLatestArticles(page, userId);
+      res.json(sqlResult);
     } catch (error) {
       console.error("Error fetching latest articles:", error);
       res.status(500).json({ message: "Failed to fetch latest articles" });
     }
   });
 
+  // Hybrid: get most-read articles (Firestore first, fallback to SQL)
   app.get('/api/articles/most-read', async (req, res) => {
     try {
-      const mostRead = await storage.getMostReadArticles();
-      res.json(mostRead);
+      // Firestore: sort by viewCount (descending)
+      const snapshot = await adminDb.collection('articles')
+        .orderBy('viewCount', 'desc')
+        .limit(10)
+        .get();
+      const articles = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      if (articles && articles.length > 0) return res.json(articles);
+      // Fallback to SQL
+      const sqlArticles = await storage.getMostReadArticles();
+      res.json(sqlArticles);
     } catch (error) {
-      console.error("Error fetching most read articles:", error);
-      res.status(500).json({ message: "Failed to fetch most read articles" });
+      console.error('Error fetching most read articles:', error);
+      res.status(500).json({ message: 'Failed to fetch most read articles' });
     }
   });
 
@@ -93,56 +124,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Articles by category
-  app.get('/api/categories/:slug/articles', async (req, res) => {
-    try {
-      const { slug } = req.params;
-      const page = parseInt(req.query.page as string) || 1;
-      const userId = req.user?.claims?.sub;
-      const result = await storage.getArticlesByCategory(slug, page, userId);
-      res.json(result);
-    } catch (error) {
-      console.error("Error fetching articles by category:", error);
-      res.status(500).json({ message: "Failed to fetch articles by category" });
-    }
-  });
-
-  // Article details
+  // Hybrid: get article by id (Firestore first, fallback to SQL)
   app.get('/api/articles/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
-      const article = await storage.getArticleById(id, userId);
-      
-      if (!article) {
-        return res.status(404).json({ message: "Article not found" });
-      }
-      
-      res.json(article);
+      // Try Firestore first
+      const article = await getFirestoreArticleById(id);
+      if (article) return res.json(article);
+      // Fallback to SQL
+      // const userId = req.user?.claims?.sub;
+      const userId = undefined;
+      const sqlArticle = await storage.getArticleById(id, userId);
+      if (!sqlArticle) return res.status(404).json({ message: 'Article not found' });
+      res.json(sqlArticle);
     } catch (error) {
       console.error("Error fetching article:", error);
       res.status(500).json({ message: "Failed to fetch article" });
     }
   });
 
-  // User interactions with article
-  app.get('/api/articles/:id/user-interactions', isAuthenticated, async (req: any, res) => {
+  // Hybrid: get articles by category (Firestore first, fallback to SQL)
+  app.get('/api/categories/:slug/articles', async (req, res) => {
     try {
-      const { id } = req.params;
-      const userId = req.user.claims.sub;
-      const interactions = await storage.getUserArticleInteractions(id, userId);
-      res.json(interactions);
+      const { slug } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      // Try Firestore first
+      const articles = await getFirestoreArticlesByCategory(slug, { page });
+      if (articles && articles.length > 0) return res.json({ category: { slug }, articles, hasMore: false });
+      // Fallback to SQL
+      // const userId = req.user?.claims?.sub;
+      const userId = undefined;
+      const sqlResult = await storage.getArticlesByCategory(slug, page, userId);
+      res.json(sqlResult);
     } catch (error) {
-      console.error("Error fetching user interactions:", error);
-      res.status(500).json({ message: "Failed to fetch user interactions" });
+      console.error("Error fetching articles by category:", error);
+      res.status(500).json({ message: "Failed to fetch articles by category" });
     }
   });
+
+  // User interactions with article
+  // User interactions with article (auth removed)
+  // You may want to reimplement this with Firebase auth if needed
 
   // Article view tracking
   app.post('/api/articles/:id/view', async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      // const userId = req.user?.claims?.sub;
+      const userId = undefined;
       await storage.recordArticleView(id, userId);
       res.json({ success: true });
     } catch (error) {
@@ -152,50 +181,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like article
-  app.post('/api/articles/:id/like', isAuthenticated, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.user.claims.sub;
-      const { liked } = req.body;
-      
-      if (liked) {
-        await storage.likeArticle(id, userId);
-      } else {
-        await storage.unlikeArticle(id, userId);
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error liking/unliking article:", error);
-      res.status(500).json({ message: "Failed to like/unlike article" });
-    }
-  });
+  // Like article (auth removed)
 
   // Bookmark article
-  app.post('/api/articles/:id/bookmark', isAuthenticated, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.user.claims.sub;
-      const { bookmarked } = req.body;
-      
-      if (bookmarked) {
-        await storage.bookmarkArticle(id, userId);
-      } else {
-        await storage.unbookmarkArticle(id, userId);
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error bookmarking/unbookmarking article:", error);
-      res.status(500).json({ message: "Failed to bookmark/unbookmark article" });
-    }
-  });
+  // Bookmark article (auth removed)
 
   // Comments
-  app.post('/api/articles/:id/comments', isAuthenticated, async (req: any, res) => {
+  // Comments endpoint (auth removed)
+  app.post('/api/articles/:id/comments', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      // const userId = req.user.claims.sub;
+      const userId = undefined;
       
       const commentData = insertCommentSchema.parse({
         content: req.body.content,
@@ -212,67 +209,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/comments/:id/like', isAuthenticated, async (req: any, res) => {
+  // Like comment endpoint (auth removed)
+  app.post('/api/comments/:id/like', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
-      await storage.likeComment(id, userId);
-      res.json({ success: true });
+      // TODO: Pass a valid userId from Firebase auth or session if needed
+      // For now, reject if no userId
+      return res.status(401).json({ message: "User authentication required" });
     } catch (error) {
       console.error("Error liking comment:", error);
       res.status(500).json({ message: "Failed to like comment" });
     }
   });
 
-  app.post('/api/comments/:id/dislike', isAuthenticated, async (req: any, res) => {
+  // Dislike comment endpoint (auth removed)
+  app.post('/api/comments/:id/dislike', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
-      await storage.dislikeComment(id, userId);
-      res.json({ success: true });
+      // TODO: Pass a valid userId from Firebase auth or session if needed
+      // For now, reject if no userId
+      return res.status(401).json({ message: "User authentication required" });
     } catch (error) {
       console.error("Error disliking comment:", error);
       res.status(500).json({ message: "Failed to dislike comment" });
     }
   });
 
-  app.post('/api/comments/:id/report', isAuthenticated, async (req: any, res) => {
+  // Report comment endpoint (auth removed)
+  app.post('/api/comments/:id/report', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
-      await storage.reportComment(id, userId);
-      res.json({ success: true });
+      // TODO: Pass a valid userId from Firebase auth or session if needed
+      // For now, reject if no userId
+      return res.status(401).json({ message: "User authentication required" });
     } catch (error) {
       console.error("Error reporting comment:", error);
       res.status(500).json({ message: "Failed to report comment" });
     }
   });
 
-  app.patch('/api/comments/:id', isAuthenticated, async (req: any, res) => {
+  // Patch comment endpoint (auth removed)
+  app.patch('/api/comments/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
-      const { content } = req.body;
-      
-      const comment = await storage.updateComment(id, userId, content);
-      res.json(comment);
+      // TODO: Pass a valid userId from Firebase auth or session if needed
+      // For now, reject if no userId
+      return res.status(401).json({ message: "User authentication required" });
     } catch (error) {
       console.error("Error updating comment:", error);
       res.status(500).json({ message: "Failed to update comment" });
     }
   });
 
-  app.delete('/api/comments/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/comments/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      // Allow admins/developers to delete any comment
-      const isAdmin = user?.role === 'admin' || user?.role === 'developer';
-      
-      await storage.deleteComment(id, userId, isAdmin);
-      res.json({ success: true });
+      // TODO: Pass a valid userId from Firebase auth or session if needed
+      // For now, reject if no userId
+      return res.status(401).json({ message: "User authentication required" });
     } catch (error) {
       console.error("Error deleting comment:", error);
       res.status(500).json({ message: "Failed to delete comment" });
@@ -303,94 +297,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User profile and bookmarks
-  app.get('/api/user/bookmarks', isAuthenticated, async (req: any, res) => {
+  // Bookmarks endpoint (auth removed)
+  app.get('/api/user/bookmarks', async (req: any, res) => {
+    return res.status(401).json({ message: "User authentication required" });
+  });
+
+  // Hybrid: get user profile (Firestore first, fallback to SQL)
+  app.get('/api/user/profile', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const bookmarks = await storage.getUserBookmarks(userId);
-      res.json(bookmarks);
+      const userId = req.query.userId || req.body.userId || req.headers['x-user-id'];
+      if (!userId) return res.status(400).json({ message: 'User ID required' });
+      // Try Firestore first
+      const profile = await getFirestoreUserProfile(userId);
+      if (profile) return res.json(profile);
+      // Fallback to SQL
+      const sqlProfile = await storage.getUserProfile(userId);
+      if (!sqlProfile) return res.status(404).json({ message: 'User not found' });
+      res.json(sqlProfile);
     } catch (error) {
-      console.error("Error fetching user bookmarks:", error);
-      res.status(500).json({ message: "Failed to fetch user bookmarks" });
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ message: 'Failed to fetch user profile' });
     }
   });
 
-  app.get('/api/user/profile', isAuthenticated, async (req: any, res) => {
+  // Hybrid: update user profile (Firestore first, fallback to SQL)
+  app.patch('/api/user/profile', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const profile = await storage.getUserProfile(userId);
-      res.json(profile);
+      const userId = req.body.userId || req.query.userId || req.headers['x-user-id'];
+      if (!userId) return res.status(400).json({ message: 'User ID required' });
+      // Try Firestore first
+      const updated = await updateFirestoreUserProfile(userId, req.body);
+      return res.json(updated);
     } catch (error) {
-      console.error("Error fetching user profile:", error);
-      res.status(500).json({ message: "Failed to fetch user profile" });
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: 'Failed to update user profile' });
     }
   });
 
-  app.patch('/api/user/profile', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const { username, bio, profileImageUrl } = req.body;
-      
-      const profile = await storage.updateUserProfile(userId, {
-        username,
-        bio,
-        profileImageUrl
-      });
-      
-      res.json(profile);
-    } catch (error) {
-      console.error("Error updating user profile:", error);
-      res.status(500).json({ message: "Failed to update user profile" });
-    }
+  // User stats endpoint (auth removed)
+  app.get('/api/user/stats', async (req: any, res) => {
+    return res.status(401).json({ message: "User authentication required" });
   });
 
-  app.get('/api/user/stats', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const stats = await storage.getUserStats(userId);
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching user stats:", error);
-      res.status(500).json({ message: "Failed to fetch user stats" });
-    }
-  });
-
-  app.post('/api/user/preferences', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const { newsletter, commentReplies, articleUpdates } = req.body;
-      
-      await storage.updateUserPreferences(userId, {
-        newsletter,
-        commentReplies,
-        articleUpdates
-      });
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error updating user preferences:", error);
-      res.status(500).json({ message: "Failed to update user preferences" });
-    }
+  // User preferences endpoint (auth removed)
+  app.post('/api/user/preferences', async (req: any, res) => {
+    return res.status(401).json({ message: "User authentication required" });
   });
 
   // Admin routes
+  // Admin middleware (auth removed)
   const adminMiddleware = async (req: any, res: any, next: any) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.role !== 'admin' && user?.role !== 'developer') {
-        return res.status(403).json({ message: "Forbidden: Admin access required" });
-      }
-      
-      next();
-    } catch (error) {
-      console.error("Error in admin middleware:", error);
-      res.status(500).json({ message: "Server error" });
-    }
+    return res.status(401).json({ message: "Admin authentication required" });
   };
 
   // Admin dashboard metrics
-  app.get('/api/admin/metrics', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.get('/api/admin/metrics', adminMiddleware, async (req, res) => {
     try {
       const metrics = await storage.getAdminMetrics();
       res.json(metrics);
@@ -401,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin articles management
-  app.get('/api/admin/articles', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.get('/api/admin/articles', adminMiddleware, async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const search = req.query.search as string || '';
@@ -415,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/articles/recent', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.get('/api/admin/articles/recent', adminMiddleware, async (req, res) => {
     try {
       const articles = await storage.getRecentArticles();
       res.json(articles);
@@ -426,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CRUD for articles
-  app.post('/api/articles', isAuthenticated, adminMiddleware, async (req: any, res) => {
+  app.post('/api/articles', adminMiddleware, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
@@ -443,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/articles/:id', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.patch('/api/articles/:id', adminMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -465,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/articles/:id', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.delete('/api/articles/:id', adminMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteArticle(id);
@@ -477,7 +438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin comment moderation
-  app.get('/api/admin/comments/:status', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.get('/api/admin/comments/:status', adminMiddleware, async (req, res) => {
     try {
       const { status } = req.params;
       const search = req.query.search as string || '';
@@ -494,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/comments/moderation', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.get('/api/admin/comments/moderation', adminMiddleware, async (req, res) => {
     try {
       const comments = await storage.getCommentsForModeration();
       res.json(comments);
@@ -504,7 +465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/comments/:id/:action', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.post('/api/admin/comments/:id/:action', adminMiddleware, async (req, res) => {
     try {
       const { id, action } = req.params;
       
@@ -521,7 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin settings
-  app.get('/api/admin/settings', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.get('/api/admin/settings', adminMiddleware, async (req, res) => {
     try {
       const settings = await storage.getSettings();
       res.json(settings);
@@ -531,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/settings/:section', isAuthenticated, adminMiddleware, async (req, res) => {
+  app.post('/api/admin/settings/:section', adminMiddleware, async (req, res) => {
     try {
       const { section } = req.params;
       
@@ -548,23 +509,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Developer-only routes
+  // Developer middleware (auth removed)
   const developerMiddleware = async (req: any, res: any, next: any) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.role !== 'developer') {
-        return res.status(403).json({ message: "Forbidden: Developer access required" });
-      }
-      
-      next();
-    } catch (error) {
-      console.error("Error in developer middleware:", error);
-      res.status(500).json({ message: "Server error" });
-    }
+    return res.status(401).json({ message: "Developer authentication required" });
   };
 
-  app.post('/api/admin/cache/clear', isAuthenticated, developerMiddleware, async (req, res) => {
+  app.post('/api/admin/cache/clear', developerMiddleware, async (req, res) => {
     try {
       // This would be a real cache clearing operation in production
       res.json({ success: true });
@@ -574,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/database/maintenance', isAuthenticated, developerMiddleware, async (req, res) => {
+  app.post('/api/admin/database/maintenance', developerMiddleware, async (req, res) => {
     try {
       // This would be a real database maintenance operation in production
       res.json({ success: true });
