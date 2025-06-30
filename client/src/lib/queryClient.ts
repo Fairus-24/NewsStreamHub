@@ -7,14 +7,31 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+
+// Helper to get userId from localStorage (set after Firebase login)
+function getUserIdHeader(): Record<string, string> {
+  try {
+    const user = JSON.parse(localStorage.getItem('firebaseUser') || '{}');
+    if (user && user.id) {
+      return { 'x-user-id': String(user.id) };
+    }
+  } catch {}
+  return {};
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const userHeaders = getUserIdHeader();
+  const headers: HeadersInit = {
+    ...(data ? { "Content-Type": "application/json" } : {}),
+    ...userHeaders,
+  };
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,8 +46,13 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const userHeaders = getUserIdHeader();
+    const headers: HeadersInit = {
+      ...userHeaders,
+    };
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

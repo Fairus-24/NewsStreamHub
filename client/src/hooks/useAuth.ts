@@ -9,59 +9,44 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authSource, setAuthSource] = useState<'firebase' | 'oidc' | null>(null);
-
-  // Try OIDC backend auth first
+  // Only use Firebase Auth
   useEffect(() => {
     let cancelled = false;
-    async function fetchBackendUser() {
-      setIsLoading(true);
-      try {
-        const res = await fetch('/api/auth/user', { credentials: 'include' });
-        if (res.ok) {
-          const backendUser = await res.json();
-          if (!cancelled) {
-            setUser(backendUser);
-            setAuthSource('oidc');
-            setIsLoading(false);
-            return;
-          }
-        }
-      } catch {}
-      // If not logged in OIDC, fallback to Firebase
-      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-        if (cancelled) return;
-        if (firebaseUser) {
-          const userRef = doc(db, "users", firebaseUser.uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            setUser({ id: firebaseUser.uid, ...userSnap.data() } as User);
-          } else {
-            const newUser: User = {
-              id: firebaseUser.uid,
-              email: firebaseUser.email || undefined,
-              firstName: firebaseUser.displayName?.split(" ")[0] || "",
-              lastName: firebaseUser.displayName?.split(" ")[1] || "",
-              username: firebaseUser.email?.split("@")[0] || firebaseUser.uid,
-              profileImageUrl: firebaseUser.photoURL || "",
-              bio: "",
-              role: "user",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            await setDoc(userRef, newUser);
-            setUser(newUser);
-          }
-          setAuthSource('firebase');
+    setIsLoading(true);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (cancelled) return;
+      if (firebaseUser) {
+        const userRef = doc(db, "users", firebaseUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = { id: firebaseUser.uid, ...userSnap.data() } as User;
+          setUser(userData);
+          localStorage.setItem('firebaseUser', JSON.stringify(userData));
         } else {
-          setUser(null);
-          setAuthSource(null);
+          const newUser: User = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email || undefined,
+            firstName: firebaseUser.displayName?.split(" ")[0] || "",
+            lastName: firebaseUser.displayName?.split(" ")[1] || "",
+            username: firebaseUser.email?.split("@")[0] || firebaseUser.uid,
+            profileImageUrl: firebaseUser.photoURL || "",
+            bio: "",
+            role: "user",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          await setDoc(userRef, newUser);
+          setUser(newUser);
+          localStorage.setItem('firebaseUser', JSON.stringify(newUser));
         }
-        setIsLoading(false);
-      });
-      return () => unsubscribe();
-    }
-    fetchBackendUser();
-    return () => { cancelled = true; };
+        setAuthSource('firebase');
+      } else {
+        setUser(null);
+        setAuthSource(null);
+      }
+      setIsLoading(false);
+    });
+    return () => { cancelled = true; unsubscribe(); };
   }, []);
 
   return {

@@ -2,16 +2,20 @@
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// You should place your service account key JSON in a safe location and never commit it to git!
-// Example: process.env.FIREBASE_SERVICE_ACCOUNT_KEY_PATH
 const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_PATH || './serviceAccountKey.json';
 
-if (!getApps().length) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const serviceAccount = require(serviceAccountPath);
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
+let adminDb: ReturnType<typeof getFirestore>;
+
+async function initFirebaseAdmin() {
+  if (!getApps().length) {
+    const serviceAccount = (await import(serviceAccountPath)).default || (await import(serviceAccountPath));
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
+  }
+  adminDb = getFirestore();
 }
 
-export const adminDb = getFirestore();
+await initFirebaseAdmin();
+
+export { adminDb };

@@ -44,13 +44,13 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center text-secondary mb-4">
         <Link href="/">
-          <a className="hover:text-primary">
+          <span className="hover:text-primary cursor-pointer">
             <Home className="w-4 h-4" />
-          </a>
+          </span>
         </Link>
         <ChevronRight className="w-4 h-4 mx-2" />
         <Link href="/admin">
-          <a className="hover:text-primary">Admin</a>
+          <span className="hover:text-primary cursor-pointer">Admin</span>
         </Link>
         {location !== '/admin' && (
           <>
@@ -74,16 +74,16 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             <nav className="space-y-1">
               {navigationItems.map((item) => (
                 <Link key={item.href} href={item.href}>
-                  <a 
+                  <span
                     className={`flex items-center py-3 px-4 rounded-md ${
                       location === item.href 
                         ? 'bg-primary text-white'
                         : 'text-secondary hover:bg-light-gray'
-                    }`}
+                    } cursor-pointer`}
                   >
                     {item.icon}
                     {item.label}
-                  </a>
+                  </span>
                 </Link>
               ))}
             </nav>

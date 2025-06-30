@@ -359,14 +359,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin routes
   // Admin middleware (auth removed)
-  const adminMiddleware = async (req: any, res: any, next: any) => {
-    return res.status(401).json({ message: "Admin authentication required" });
-  };
+  // Admin middleware (Firebase-based)
+  const { firebaseAdminMiddleware } = await import('./firebaseAdminMiddleware');
+  const adminMiddleware = firebaseAdminMiddleware;
 
   // Admin dashboard metrics
   app.get('/api/admin/metrics', adminMiddleware, async (req, res) => {
     try {
-      const metrics = await storage.getAdminMetrics();
+      // Use Firestore-based snapshot for dashboard
+      const { getLatestAdminDashboardSnapshot, saveAdminDashboardSnapshot } = await import('./firestoreAdminDashboardService');
+      let metrics = await getLatestAdminDashboardSnapshot();
+      if (!metrics) {
+        metrics = await saveAdminDashboardSnapshot();
+      }
       res.json(metrics);
     } catch (error) {
       console.error("Error fetching admin metrics:", error);
@@ -380,8 +385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page as string) || 1;
       const search = req.query.search as string || '';
       const category = req.query.category as string || 'all';
-      
-      const articles = await storage.getAdminArticles(page, search, category);
+      const { getFirestoreAdminArticles } = await import('./firestoreAdminService');
+      const articles = await getFirestoreAdminArticles(page, search, category);
       res.json(articles);
     } catch (error) {
       console.error("Error fetching admin articles:", error);
